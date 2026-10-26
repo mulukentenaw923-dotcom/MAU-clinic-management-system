@@ -22,10 +22,10 @@ const SEED_DATA = {
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Overview', icon: '⌂' },
+  { id: 'doctor', label: 'Doctor', icon: '✚' },
   { id: 'patients', label: 'Patients', icon: '♡' },
-  { id: 'doctor', label: 'Consultations', icon: '✚' },
-  { id: 'leave', label: 'Sick leave', icon: '▤' },
   { id: 'pharmacy', label: 'Pharmacy', icon: '⚕' },
+  { id: 'leave', label: 'Sick leave', icon: '▤' },
 ];
 
 function readSavedData() {
@@ -124,35 +124,16 @@ function App() {
 function WelcomePage({ onSignIn }) {
   return (
     <main className="welcome-screen">
-      <header className="welcome-header">
-        <a className="university-brand" href="#welcome">
-          <img className="university-mark" alt="" src="/logo-mekdela-amba.png" />
-          <span><strong>Mekdela Amba University</strong><small>CLINIC MANAGEMENT SYSTEM</small></span>
-        </a>
-        <span className="campus-label">HEALTH SERVICES</span>
-      </header>
       <section className="welcome-layout">
-        <div className="welcome-left">
-          <div className="welcome-content">
-            <div className="welcome-emblem"><img alt="" src="/logo-mekdela-amba.png" /></div>
-            <div className="eyebrow">MEKDELA AMBA UNIVERSITY · HEALTH SERVICES</div>
-            <h1>Welcome to<br /><span>Mekdela Amba University</span></h1>
-            <p className="welcome-subtitle">Clinic Management System</p>
-            <p>A coordinated workspace for university clinic services, patient care, and pharmacy management.</p>
-            <div className="welcome-note"><span aria-hidden="true">✦</span> Supporting a healthier university community</div>
-          </div>
-          <div className="welcome-visual" aria-label="Mekdela Amba University campus">
-            <img alt="Mekdela Amba University campus" src="/mekdela-campus.jpg" />
-          </div>
-        </div>
         <SignInForm onSignIn={onSignIn} />
       </section>
-      <footer className="welcome-footer">MEKDELA AMBA UNIVERSITY <span>·</span> HEALTH SERVICES</footer>
     </main>
   );
 }
 
 function SignInForm({ onSignIn }) {
+  const [isCreatingAccount, setIsCreatingAccount] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -160,33 +141,66 @@ function SignInForm({ onSignIn }) {
   function submit(event) {
     event.preventDefault();
     const trimmedEmail = email.trim();
-    if (!trimmedEmail || !password.trim()) {
-      setError('Enter both your email address and password to continue.');
+    const trimmedName = name.trim();
+    if (!trimmedEmail || !password || (isCreatingAccount && !trimmedName)) {
+      setError(isCreatingAccount
+        ? 'Enter your full name, email address, and password to continue.'
+        : 'Enter both your email address and password to continue.');
       return;
     }
-    onSignIn({ name: trimmedEmail.split('@')[0], role: 'University staff' });
+    onSignIn({
+      name: isCreatingAccount ? trimmedName : trimmedEmail.split('@')[0],
+      role: 'University staff',
+    });
   }
 
   return (
     <div className="signin-card">
-      <div className="login-kicker">UNIVERSITY HEALTH SERVICES</div>
-      <h2>Sign in</h2>
-      <p className="login-copy">Use your university account to continue.</p>
+      <h1>{isCreatingAccount ? 'Create an account' : 'Welcome to Mekdela Amba University'}</h1>
+      <p className="login-copy">
+        {isCreatingAccount ? 'Create a staff profile to access the clinic dashboard.' : 'Clinic Management System · Sign in to access your clinic dashboard.'}
+      </p>
       <form className="form-stack" onSubmit={submit}>
+        {isCreatingAccount && (
+          <label htmlFor="login-name">Full name
+            <input autoComplete="name" id="login-name" onChange={(event) => { setName(event.target.value); setError(''); }} placeholder="Your full name" required value={name} />
+          </label>
+        )}
         <label htmlFor="login-email">Email address
-          <input autoComplete="username" id="login-email" onChange={(event) => { setEmail(event.target.value); setError(''); }} placeholder="name@university.edu" required type="email" value={email} />
+          <span className="input-wrap">
+            <svg aria-hidden="true" className="field-icon" fill="none" viewBox="0 0 20 20">
+              <rect height="12" rx="2" stroke="currentColor" strokeWidth="1.5" width="16" x="2" y="4" />
+              <path d="m3 5 7 5 7-5" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+            <input autoComplete={isCreatingAccount ? 'email' : 'username'} id="login-email" onChange={(event) => { setEmail(event.target.value); setError(''); }} placeholder="name@university.edu" required type="email" value={email} />
+          </span>
         </label>
         <label htmlFor="login-password">Password
-          <input autoComplete="current-password" id="login-password" onChange={(event) => { setPassword(event.target.value); setError(''); }} placeholder="Enter your password" required type="password" value={password} />
+          <span className="input-wrap">
+            <svg aria-hidden="true" className="field-icon" fill="none" viewBox="0 0 20 20">
+              <rect height="9" rx="1.5" stroke="currentColor" strokeWidth="1.5" width="14" x="3" y="9" />
+              <path d="M6 9V6a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.5" />
+            </svg>
+            <input autoComplete={isCreatingAccount ? 'new-password' : 'current-password'} id="login-password" onChange={(event) => { setPassword(event.target.value); setError(''); }} placeholder={isCreatingAccount ? 'Create a password' : 'Enter your password'} required type="password" value={password} />
+          </span>
         </label>
         {error && <p className="login-error" role="alert">{error}</p>}
-        <button className="welcome-button login-submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
+        <button className="welcome-button login-submit" type="submit">
+          <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 16 16" width="16">
+            <rect height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" width="10" x="3" y="7" />
+            <path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
+          {isCreatingAccount ? 'Create account' : 'Sign in'}
+        </button>
       </form>
-      <div className="login-divider"><span>OR</span></div>
-      <button className="guest-sign-in" onClick={() => onSignIn({ name: 'Guest', role: 'Guest access' })} type="button">
-        Sign in without an account
-      </button>
-      <p className="privacy-note"><span aria-hidden="true">ⓘ</span> Demo sign-in only. Credentials are not verified or stored.</p>
+      <p className="account-prompt">
+        {isCreatingAccount ? 'Already have an account?' : 'New staff member?'}
+        {' '}
+        <button className="account-toggle" onClick={() => { setIsCreatingAccount((current) => !current); setError(''); }} type="button">
+          {isCreatingAccount ? 'Sign in' : 'Create an account'}
+        </button>
+      </p>
+      <p className="privacy-note"><span aria-hidden="true">ⓘ</span> Demo only. Account details are not saved or verified.</p>
     </div>
   );
 }
@@ -220,7 +234,7 @@ function Dashboard({ data, onNavigate }) {
           {lowStock.length ? lowStock.slice(0, 3).map((item) => <div className="stock-watch" key={item.id}><span className="medicine-icon">Rx</span><span className="stock-name"><strong>{item.name}</strong><small>Reorder at {item.reorder} units</small></span><span className="stock-count">{item.quantity} left</span></div>) : <EmptyState title="Stock levels look good" body="No items are below their reorder level." />}
         </section>
       </div>
-      <section className="panel quick-panel"><div className="panel-heading"><div><h2>Quick actions</h2><p>Jump into a common clinic task</p></div></div><div className="quick-actions"><QuickAction icon="＋" title="Register patient" onClick={() => onNavigate('patients')} /><QuickAction icon="✚" title="Start consultation" onClick={() => onNavigate('doctor')} /><QuickAction icon="▤" title="Review sick leave" onClick={() => onNavigate('leave')} /><QuickAction icon="⚕" title="Dispense medicine" onClick={() => onNavigate('pharmacy')} /></div></section>
+      <section className="panel quick-panel"><div className="panel-heading"><div><h2>Quick actions</h2><p>Jump into a common clinic task</p></div></div><div className="quick-actions"><QuickAction icon="✚" title="Start consultation" onClick={() => onNavigate('doctor')} /><QuickAction icon="＋" title="Register patient" onClick={() => onNavigate('patients')} /><QuickAction icon="⚕" title="Dispense medicine" onClick={() => onNavigate('pharmacy')} /><QuickAction icon="▤" title="Review sick leave" onClick={() => onNavigate('leave')} /></div></section>
     </>
   );
 }
