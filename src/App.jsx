@@ -108,7 +108,11 @@ function App() {
         <header className="topbar">
           <div className="mobile-brand"><span className="brand-mark"><img alt="" src="/logo-mekdela-amba.png" /></span><strong>Mekdela Amba University</strong></div>
           <div className="breadcrumb">Clinic <span>/</span> <strong>{NAV_ITEMS.find((item) => item.id === page)?.label}</strong></div>
-          <div className="topbar-right"><span className="today-label">{new Intl.DateTimeFormat('en', { dateStyle: 'full' }).format(new Date())}</span><span className="avatar avatar-small">{user.name.slice(0, 1).toUpperCase()}</span></div>
+          <div className="topbar-right">
+            <span className="today-label">{new Intl.DateTimeFormat('en', { dateStyle: 'full' }).format(new Date())}</span>
+            <span className="avatar avatar-small">{user.name.slice(0, 1).toUpperCase()}</span>
+            <button className="topbar-logout" onClick={() => setUser(null)} type="button"><span aria-hidden="true">↪</span> Log out</button>
+          </div>
         </header>
         {notice && <div className="toast" role="status">{notice}<button onClick={() => setNotice('')} type="button" aria-label="Dismiss notification">×</button></div>}
         <div className="content">
@@ -228,8 +232,8 @@ function SignInForm({ onSignIn }) {
   );
 }
 
-function PageHeading({ eyebrow, title, description, action }) {
-  return <div className="page-heading"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{description && <p>{description}</p>}</div>{action}</div>;
+function PageHeading({ eyebrow, title, description, action, className = '' }) {
+  return <div className={`page-heading ${className}`}><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{description && <p>{description}</p>}</div>{action}</div>;
 }
 
 function Dashboard({ data, onNavigate }) {
@@ -289,12 +293,33 @@ function PatientsPage({ data, updateData, notify }) {
   }
   return (
     <>
-      <PageHeading eyebrow="CARE DIRECTORY" title="Patients" description="Search and manage your clinic’s patient records." action={<button className="button button-primary" onClick={() => setShowForm(true)} type="button"><span>＋</span> Add patient</button>} />
+      <PageHeading className="patients-page-heading" eyebrow="CARE DIRECTORY" title="Patients" description="Search and manage your clinic’s patient records." action={<button className="button button-primary add-patient-button" onClick={() => setShowForm(true)} type="button"><span aria-hidden="true">＋</span> Add patient</button>} />
       <section className="panel">
         <div className="toolbar"><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label="Search patients" onChange={(event) => setQuery(event.target.value)} placeholder="Search name, patient ID or phone" value={query} /></label><select aria-label="Filter by status" className="filter-select" onChange={(event) => setStatus(event.target.value)} value={status}><option>All statuses</option><option>Waiting</option><option>In consultation</option><option>Completed</option></select><span className="result-count">{patients.length} patients</span></div>
         <div className="table-wrap"><table><thead><tr><th>Patient</th><th>Patient ID</th><th>Age / Sex</th><th>Phone</th><th>Status</th><th></th></tr></thead><tbody>{patients.map((patient) => <tr key={patient.id}><td><button className="patient-link" onClick={() => setSelected(patient)} type="button"><span className="avatar table-avatar">{patient.name.slice(0, 1)}</span><strong>{patient.name}</strong></button></td><td className="muted-cell">{patient.id}</td><td>{patient.age} <span className="muted-cell">/ {patient.sex}</span></td><td>{patient.phone}</td><td><StatusBadge value={patient.status} /></td><td><button aria-label={`View ${patient.name}`} className="row-action" onClick={() => setSelected(patient)} type="button">View ↗</button></td></tr>)}</tbody></table>{patients.length === 0 && <EmptyState title="No patients found" body="Try another search or add a patient record." />}</div>
       </section>
-      {showForm && <Modal title="Register a patient" onClose={() => setShowForm(false)}><form className="form-stack" onSubmit={addPatient}><label>Full name<input autoFocus name="name" placeholder="Patient name" required /></label><div className="form-row"><label>Age<input max="120" min="0" name="age" required type="number" /></label><label>Sex<select name="sex"><option>Female</option><option>Male</option><option>Other</option></select></label></div><label>Phone number<input name="phone" placeholder="Phone number" required /></label><div className="form-actions"><button className="button button-quiet" onClick={() => setShowForm(false)} type="button">Cancel</button><button className="button button-primary" type="submit">Save patient</button></div></form></Modal>}
+      {showForm && (
+        <Modal className="patient-form-modal" title="Register a patient" onClose={() => setShowForm(false)}>
+          <div className="patient-form-intro">
+            <span className="patient-form-icon" aria-hidden="true">+</span>
+            <div><strong>New patient profile</strong><p>Enter the patient’s basic details to add them to the clinic queue.</p></div>
+          </div>
+          <form className="form-stack patient-form" onSubmit={addPatient}>
+            <div className="patient-form-section-title">PERSONAL INFORMATION</div>
+            <label>Full name<input autoFocus autoComplete="name" name="name" placeholder="e.g. Alemu Bekele" required /></label>
+            <div className="form-row">
+              <label>Age<input max="120" min="0" name="age" placeholder="Age in years" required type="number" /></label>
+              <label>Sex<select name="sex" required defaultValue=""><option disabled value="">Select sex</option><option>Female</option><option>Male</option><option>Other</option></select></label>
+            </div>
+            <label>Phone number<input autoComplete="tel" name="phone" placeholder="e.g. 0912 345 678" required type="tel" /></label>
+            <div className="patient-form-note"><span aria-hidden="true">i</span> This demo stores sample records only in this browser.</div>
+            <div className="form-actions">
+              <button className="button button-quiet" onClick={() => setShowForm(false)} type="button">Cancel</button>
+              <button className="button button-primary" type="submit"><span aria-hidden="true">＋</span> Save patient</button>
+            </div>
+          </form>
+        </Modal>
+      )}
       {selected && <Modal title="Patient record" onClose={() => setSelected(null)}><div className="patient-record"><div className="record-person"><span className="avatar record-avatar">{selected.name.slice(0, 1)}</span><div><h3>{selected.name}</h3><p>{selected.id} · {selected.age} years · {selected.sex}</p></div></div><div className="record-line"><span>Phone</span><strong>{selected.phone}</strong></div><div className="record-line"><span>Queue status</span><StatusBadge value={selected.status} /></div><h4>Consultation history</h4>{selected.visits?.length ? selected.visits.map((visit) => <div className="visit-note" key={visit.id}><strong>{visit.date}</strong><p>{visit.diagnosis}</p><small>{visit.notes}</small></div>) : <p className="empty-history">No consultation notes have been recorded.</p>}</div></Modal>}
     </>
   );
@@ -437,6 +462,7 @@ function PharmacyPage({ data, updateData, notify }) {
   const [query, setQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [selectedRx, setSelectedRx] = useState('');
+  const [medicineToRemove, setMedicineToRemove] = useState(null);
   const available = data.prescriptions.filter((prescription) => prescription.status === 'Ready');
   const stock = data.inventory.filter((item) => item.name.toLowerCase().includes(query.toLowerCase()) || item.category.toLowerCase().includes(query.toLowerCase()));
   function addMedicine(event) {
@@ -446,6 +472,24 @@ function PharmacyPage({ data, updateData, notify }) {
     updateData((current) => ({ ...current, inventory: [medicine, ...current.inventory] }));
     setShowAdd(false);
     notify(`${medicine.name} added to inventory.`);
+  }
+  function removeMedicine() {
+    if (!medicineToRemove) return;
+    const hasReadyPrescription = data.prescriptions.some(
+      (prescription) => prescription.status === 'Ready'
+        && prescription.medicine.toLowerCase() === medicineToRemove.name.toLowerCase(),
+    );
+    if (hasReadyPrescription) {
+      notify('This medicine is linked to a ready prescription and cannot be removed yet.');
+      setMedicineToRemove(null);
+      return;
+    }
+    updateData((current) => ({
+      ...current,
+      inventory: current.inventory.filter((item) => item.id !== medicineToRemove.id),
+    }));
+    notify(`${medicineToRemove.name} removed from inventory.`);
+    setMedicineToRemove(null);
   }
   function dispense(event) {
     event.preventDefault();
@@ -467,9 +511,10 @@ function PharmacyPage({ data, updateData, notify }) {
       <PageHeading eyebrow="MEDICINE & SUPPLIES" title="Pharmacy" description="Track medicine stock and fulfill prescriptions from consultations." action={<button className="button button-primary" onClick={() => setShowAdd(true)} type="button"><span>＋</span> Add medicine</button>} />
       <div className="pharmacy-stats"><div className="mini-stat"><span>Total items</span><strong>{data.inventory.length}</strong></div><div className="mini-stat"><span>Units in stock</span><strong>{data.inventory.reduce((sum, item) => sum + item.quantity, 0)}</strong></div><div className="mini-stat"><span>Low stock</span><strong className={data.inventory.some((item) => item.quantity <= item.reorder) ? 'warning-text' : ''}>{data.inventory.filter((item) => item.quantity <= item.reorder).length}</strong></div><div className="mini-stat"><span>Ready prescriptions</span><strong>{available.length}</strong></div></div>
       <section className="panel dispense-panel"><div className="panel-heading"><div><h2>Dispense prescription</h2><p>Dispensing reduces the matching inventory by one unit.</p></div></div><form className="dispense-form" onSubmit={dispense}><label className="search-box"><span aria-hidden="true">Rx</span><select aria-label="Choose prescription" onChange={(event) => setSelectedRx(event.target.value)} required value={selectedRx}><option value="">Select a ready prescription</option>{available.map((rx) => <option key={rx.id} value={rx.id}>{rx.patientName} — {rx.medicine} ({rx.instructions || 'No instructions'})</option>)}</select></label><button className="button button-primary" disabled={!available.length} type="submit">Dispense medicine <span>→</span></button></form>{!available.length && <p className="form-hint">No prescriptions are waiting. Add one from the Consultations workspace.</p>}</section>
-      <section className="panel"><div className="panel-heading"><div><h2>Medicine inventory</h2><p>Monitor quantities and expiry dates</p></div></div><div className="toolbar"><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label="Search inventory" onChange={(event) => setQuery(event.target.value)} placeholder="Search medicine or category" value={query} /></label><span className="result-count">{stock.length} items</span></div><div className="table-wrap"><table><thead><tr><th>Medicine</th><th>Category</th><th>In stock</th><th>Reorder at</th><th>Expiry date</th><th>Status</th></tr></thead><tbody>{stock.map((item) => <tr key={item.id}><td><span className="medicine-icon">Rx</span><strong>{item.name}</strong></td><td>{item.category}</td><td><strong>{item.quantity}</strong> units</td><td>{item.reorder} units</td><td>{item.expiry}</td><td><StatusBadge value={item.quantity <= item.reorder ? 'Low stock' : 'In stock'} /></td></tr>)}</tbody></table>{!stock.length && <EmptyState title="No medicines found" body="Try another search term." />}</div></section>
+      <section className="panel"><div className="panel-heading"><div><h2>Medicine inventory</h2><p>Monitor quantities and expiry dates</p></div></div><div className="toolbar"><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label="Search inventory" onChange={(event) => setQuery(event.target.value)} placeholder="Search medicine or category" value={query} /></label><span className="result-count">{stock.length} items</span></div><div className="table-wrap"><table><thead><tr><th>Medicine</th><th>Category</th><th>In stock</th><th>Reorder at</th><th>Expiry date</th><th>Status</th><th>Actions</th></tr></thead><tbody>{stock.map((item) => <tr key={item.id}><td><span className="medicine-icon">Rx</span><strong>{item.name}</strong></td><td>{item.category}</td><td><strong>{item.quantity}</strong> units</td><td>{item.reorder} units</td><td>{item.expiry}</td><td><StatusBadge value={item.quantity <= item.reorder ? 'Low stock' : 'In stock'} /></td><td><button aria-label={`Remove ${item.name} from inventory`} className="row-action inventory-remove" onClick={() => setMedicineToRemove(item)} type="button">Remove</button></td></tr>)}</tbody></table>{!stock.length && <EmptyState title="No medicines found" body="Try another search term." />}</div></section>
       <section className="panel prescription-history"><div className="panel-heading"><div><h2>Recent prescriptions</h2><p>Medication orders recorded during consultations</p></div></div>{data.prescriptions.length ? <div className="table-wrap"><table><thead><tr><th>Patient</th><th>Medication</th><th>Instructions</th><th>Date</th><th>Status</th></tr></thead><tbody>{data.prescriptions.map((rx) => <tr key={rx.id}><td><strong>{rx.patientName}</strong></td><td>{rx.medicine}</td><td>{rx.instructions || '—'}</td><td>{rx.date}</td><td><StatusBadge value={rx.status} /></td></tr>)}</tbody></table></div> : <EmptyState title="No prescriptions yet" body="Prescriptions saved in consultations will appear here." />}</section>
       {showAdd && <Modal title="Add medicine to inventory" onClose={() => setShowAdd(false)}><form className="form-stack" onSubmit={addMedicine}><label>Medicine name<input autoFocus name="name" placeholder="e.g. Paracetamol 500 mg" required /></label><label>Category<input name="category" placeholder="e.g. Pain relief" required /></label><div className="form-row"><label>Quantity<input min="0" name="quantity" required type="number" /></label><label>Reorder level<input min="0" name="reorder" required type="number" /></label></div><label>Expiry date<input min={today()} name="expiry" required type="date" /></label><div className="form-actions"><button className="button button-quiet" onClick={() => setShowAdd(false)} type="button">Cancel</button><button className="button button-primary" type="submit">Save medicine</button></div></form></Modal>}
+      {medicineToRemove && <Modal title="Remove medicine?" onClose={() => setMedicineToRemove(null)}><p className="confirm-copy">Remove {medicineToRemove.name} from the inventory? This cannot be undone.</p><div className="form-actions"><button className="button button-quiet" onClick={() => setMedicineToRemove(null)} type="button">Cancel</button><button className="button button-danger" onClick={removeMedicine} type="button">Remove medicine</button></div></Modal>}
     </>
   );
 }
@@ -487,13 +532,13 @@ function EmptyState({ title, body }) {
   return <div className="empty-state"><span className="empty-icon">⌕</span><strong>{title}</strong><p>{body}</p></div>;
 }
 
-function Modal({ title, onClose, children }) {
+function Modal({ title, onClose, children, className = '' }) {
   useEffect(() => {
     function onKeyDown(event) { if (event.key === 'Escape') onClose(); }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section aria-labelledby="modal-title" aria-modal="true" className="modal-card" role="dialog"><div className="modal-heading"><h2 id="modal-title">{title}</h2><button aria-label="Close dialog" className="icon-button" onClick={onClose} type="button">×</button></div>{children}</section></div>;
+  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section aria-labelledby="modal-title" aria-modal="true" className={`modal-card ${className}`} role="dialog"><div className="modal-heading"><h2 id="modal-title">{title}</h2><button aria-label="Close dialog" className="icon-button" onClick={onClose} type="button">×</button></div>{children}</section></div>;
 }
 
 export default App;
