@@ -18,6 +18,7 @@ const SEED_DATA = {
     { id: 'SL-207', patientId: 'P-1047', patientName: 'Dawit Alemu', from: '2026-10-26', to: '2026-10-28', reason: 'Acute illness', status: 'Pending', created: '2026-10-26' },
   ],
   prescriptions: [],
+  doctors: [],
 };
 
 const NAV_ITEMS = [
@@ -85,14 +86,16 @@ function App() {
         <div className="nav-caption">WORKSPACE</div>
         <nav className="side-nav" aria-label="Main navigation">
           {NAV_ITEMS.map((item) => (
-            <button className={`nav-item ${page === item.id ? 'active' : ''}`} key={item.id} onClick={() => setPage(item.id)} type="button">
+            <button aria-current={page === item.id ? 'page' : undefined} className={`nav-item ${page === item.id ? 'active' : ''}`} key={item.id} onClick={() => setPage(item.id)} type="button">
               <span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}
               {item.id === 'leave' && data.leaves.some((leave) => leave.status === 'Pending') && <span className="nav-dot" />}
             </button>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="demo-callout"><span className="status-dot" /> Demo workspace <small>Sample records only</small></div>
+          <button className="demo-callout" onClick={() => setPage('dashboard')} type="button" aria-label="Demo workspace, return to overview">
+            <span className="status-dot" /> Demo workspace <small>Sample records only</small>
+          </button>
           <button className="profile-button" onClick={() => setUser(null)} type="button" aria-label="Log out">
             <span className="avatar">{user.name.slice(0, 1).toUpperCase()}</span>
             <span className="profile-info"><strong>{user.name}</strong><small>{user.role}</small></span>
@@ -136,6 +139,7 @@ function SignInForm({ onSignIn }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
   function submit(event) {
@@ -175,15 +179,34 @@ function SignInForm({ onSignIn }) {
             <input autoComplete={isCreatingAccount ? 'email' : 'username'} id="login-email" onChange={(event) => { setEmail(event.target.value); setError(''); }} placeholder="name@university.edu" required type="email" value={email} />
           </span>
         </label>
-        <label htmlFor="login-password">Password
+        <div className="password-field">
+          <label htmlFor="login-password">Password</label>
           <span className="input-wrap">
             <svg aria-hidden="true" className="field-icon" fill="none" viewBox="0 0 20 20">
               <rect height="9" rx="1.5" stroke="currentColor" strokeWidth="1.5" width="14" x="3" y="9" />
               <path d="M6 9V6a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.5" />
             </svg>
-            <input autoComplete={isCreatingAccount ? 'new-password' : 'current-password'} id="login-password" onChange={(event) => { setPassword(event.target.value); setError(''); }} placeholder={isCreatingAccount ? 'Create a password' : 'Enter your password'} required type="password" value={password} />
+            <input autoComplete={isCreatingAccount ? 'new-password' : 'current-password'} id="login-password" onChange={(event) => { setPassword(event.target.value); setError(''); }} placeholder={isCreatingAccount ? 'Create a password' : 'Enter your password'} required type={showPassword ? 'text' : 'password'} value={password} />
+            <button
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              className="password-visibility"
+              onClick={() => setShowPassword((visible) => !visible)}
+              type="button"
+            >
+              {showPassword ? (
+                <svg aria-hidden="true" fill="none" viewBox="0 0 20 20">
+                  <path d="M3 3l14 14M8.6 8.7a2 2 0 0 0 2.7 2.7M7 5.5A9.5 9.5 0 0 1 10 5c4.2 0 7.2 3.1 8 5-.3.8-1 1.7-2 2.6M5.2 6.8C3.4 7.9 2.3 9.3 2 10c.8 1.9 3.8 5 8 5 1 0 1.9-.2 2.7-.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
+                </svg>
+              ) : (
+                <svg aria-hidden="true" fill="none" viewBox="0 0 20 20">
+                  <path d="M2 10c.8-1.9 3.8-5 8-5s7.2 3.1 8 5c-.8 1.9-3.8 5-8 5s-7.2-3.1-8-5Z" stroke="currentColor" strokeWidth="1.5" />
+                  <circle cx="10" cy="10" r="2" stroke="currentColor" strokeWidth="1.5" />
+                </svg>
+              )}
+            </button>
           </span>
-        </label>
+        </div>
         {error && <p className="login-error" role="alert">{error}</p>}
         <button className="welcome-button login-submit" type="submit">
           <svg aria-hidden="true" fill="none" height="16" viewBox="0 0 16 16" width="16">
@@ -278,6 +301,8 @@ function PatientsPage({ data, updateData, notify }) {
 }
 
 function ConsultationsPage({ data, updateData, notify }) {
+  const [showDoctorForm, setShowDoctorForm] = useState(false);
+  const [doctorToDelete, setDoctorToDelete] = useState(null);
   const eligible = data.patients.filter((patient) => patient.status !== 'Completed');
   const [selectedId, setSelectedId] = useState(eligible[0]?.id ?? '');
   const selected = data.patients.find((patient) => patient.id === selectedId);
@@ -285,6 +310,28 @@ function ConsultationsPage({ data, updateData, notify }) {
   const [notes, setNotes] = useState('');
   const [medicine, setMedicine] = useState('');
   const [instructions, setInstructions] = useState('');
+  function addDoctor(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const doctor = {
+      id: makeId('D'),
+      name: form.get('name').trim(),
+      specialty: form.get('specialty').trim(),
+      phone: form.get('phone').trim(),
+    };
+    if (!doctor.name || !doctor.specialty || !doctor.phone) {
+      notify('Enter the doctor’s name, specialty, and phone number.');
+      return;
+    }
+    updateData((current) => ({ ...current, doctors: [doctor, ...(current.doctors || [])] }));
+    setShowDoctorForm(false);
+    notify(`${doctor.name} added to the doctor list.`);
+  }
+  function removeDoctor(doctor) {
+    updateData((current) => ({ ...current, doctors: current.doctors.filter((item) => item.id !== doctor.id) }));
+    setDoctorToDelete(null);
+    notify(`${doctor.name} removed from the doctor list.`);
+  }
   function saveConsultation(event) {
     event.preventDefault();
     if (!selected || !diagnosis.trim()) return;
@@ -301,6 +348,23 @@ function ConsultationsPage({ data, updateData, notify }) {
   return (
     <>
       <PageHeading eyebrow="CLINICAL WORKSPACE" title="Consultations" description="Review the queue, record clinical notes and prepare prescriptions." />
+      <section className="panel doctor-directory-panel">
+        <div className="panel-heading">
+          <div><h2>Doctors</h2><p>Add and manage the doctors in this clinic.</p></div>
+          <button className="button button-primary" onClick={() => setShowDoctorForm(true)} type="button"><span>＋</span> Add doctor</button>
+        </div>
+        {data.doctors?.length ? (
+          <div className="doctor-list">
+            {data.doctors.map((doctor) => (
+              <article className="doctor-card" key={doctor.id}>
+                <span className="doctor-avatar" aria-hidden="true">{doctor.name.slice(0, 1).toUpperCase()}</span>
+                <div className="doctor-details"><strong>{doctor.name}</strong><span>{doctor.specialty}</span><small>{doctor.phone}</small></div>
+                <button className="row-action doctor-remove" onClick={() => setDoctorToDelete(doctor)} type="button">Remove</button>
+              </article>
+            ))}
+          </div>
+        ) : <EmptyState title="No doctors added yet" body="Add a doctor to keep the clinic team list up to date." />}
+      </section>
       <div className="consult-grid">
         <section className="panel queue-panel"><div className="panel-heading"><div><h2>Patient queue</h2><p>{eligible.length} waiting for care</p></div><span className="queue-count">{eligible.length}</span></div><PatientRows patients={eligible} selectedId={selectedId} onSelect={setSelectedId} />{eligible.length === 0 && <EmptyState title="Queue is clear" body="Register a patient to start a consultation." />}</section>
         <section className="panel consultation-panel">
@@ -310,6 +374,28 @@ function ConsultationsPage({ data, updateData, notify }) {
           </> : <EmptyState title="Select a patient" body="Choose someone in the queue to open a consultation." />}
         </section>
       </div>
+      {showDoctorForm && (
+        <Modal title="Add a doctor" onClose={() => setShowDoctorForm(false)}>
+          <form className="form-stack" onSubmit={addDoctor}>
+            <label>Doctor name<input autoFocus name="name" placeholder="Full name" required /></label>
+            <label>Specialty<input name="specialty" placeholder="e.g. General practitioner" required /></label>
+            <label>Phone number<input autoComplete="tel" name="phone" placeholder="Phone number" required type="tel" /></label>
+            <div className="form-actions">
+              <button className="button button-quiet" onClick={() => setShowDoctorForm(false)} type="button">Cancel</button>
+              <button className="button button-primary" type="submit">Save doctor</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {doctorToDelete && (
+        <Modal title="Remove this doctor?" onClose={() => setDoctorToDelete(null)}>
+          <p className="confirm-copy">Remove {doctorToDelete.name} from the clinic doctor list?</p>
+          <div className="form-actions">
+            <button className="button button-quiet" onClick={() => setDoctorToDelete(null)} type="button">Cancel</button>
+            <button className="button button-danger" onClick={() => removeDoctor(doctorToDelete)} type="button">Remove doctor</button>
+          </div>
+        </Modal>
+      )}
     </>
   );
 }
