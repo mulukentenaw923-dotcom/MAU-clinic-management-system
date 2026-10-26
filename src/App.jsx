@@ -50,7 +50,6 @@ function App() {
   const [data, setData] = useState(readSavedData);
   const [page, setPage] = useState('dashboard');
   const [user, setUser] = useState(null);
-  const [authPage, setAuthPage] = useState('welcome');
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
@@ -73,9 +72,7 @@ function App() {
   }
 
   if (!user) {
-    return authPage === 'welcome'
-      ? <WelcomePage onContinue={() => setAuthPage('signin')} />
-      : <SignInPage onBack={() => setAuthPage('welcome')} onSignIn={setUser} />;
+    return <WelcomePage onSignIn={setUser} />;
   }
 
   return (
@@ -96,7 +93,7 @@ function App() {
         </nav>
         <div className="sidebar-bottom">
           <div className="demo-callout"><span className="status-dot" /> Demo workspace <small>Sample records only</small></div>
-          <button className="profile-button" onClick={() => { setUser(null); setAuthPage('welcome'); }} type="button" aria-label="Log out">
+          <button className="profile-button" onClick={() => setUser(null)} type="button" aria-label="Log out">
             <span className="avatar">{user.name.slice(0, 1).toUpperCase()}</span>
             <span className="profile-info"><strong>{user.name}</strong><small>{user.role}</small></span>
             <span className="logout-label"><span aria-hidden="true">↪</span> Log out</span>
@@ -124,7 +121,7 @@ function App() {
   );
 }
 
-function WelcomePage({ onContinue }) {
+function WelcomePage({ onSignIn }) {
   return (
     <main className="welcome-screen">
       <header className="welcome-header">
@@ -142,20 +139,20 @@ function WelcomePage({ onContinue }) {
             <h1>Welcome to<br /><span>Mekdela Amba University</span></h1>
             <p className="welcome-subtitle">Clinic Management System</p>
             <p>A coordinated workspace for university clinic services, patient care, and pharmacy management.</p>
-            <button className="welcome-button" onClick={onContinue} type="button">Continue to sign in <span aria-hidden="true">→</span></button>
             <div className="welcome-note"><span aria-hidden="true">✦</span> Supporting a healthier university community</div>
           </div>
           <div className="welcome-visual" aria-label="Mekdela Amba University campus">
             <img alt="Mekdela Amba University campus" src="/mekdela-campus.jpg" />
           </div>
         </div>
+        <SignInForm onSignIn={onSignIn} />
       </section>
       <footer className="welcome-footer">MEKDELA AMBA UNIVERSITY <span>·</span> HEALTH SERVICES</footer>
     </main>
   );
 }
 
-function SignInPage({ onBack, onSignIn }) {
+function SignInForm({ onSignIn }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -171,39 +168,26 @@ function SignInPage({ onBack, onSignIn }) {
   }
 
   return (
-    <main className="welcome-screen signin-screen">
-      <header className="welcome-header">
-        <a className="university-brand" href="#welcome" onClick={(event) => { event.preventDefault(); onBack(); }}>
-          <img className="university-mark" alt="" src="/logo-mekdela-amba.png" />
-          <span><strong>Mekdela Amba University</strong><small>CLINIC MANAGEMENT SYSTEM</small></span>
-        </a>
-        <button className="back-home" onClick={onBack} type="button"><span aria-hidden="true">←</span> Back to home</button>
-      </header>
-      <section className="signin-layout">
-        <div className="signin-card">
-          <img className="signin-logo" alt="" src="/logo-mekdela-amba.png" />
-          <div className="login-kicker">UNIVERSITY HEALTH SERVICES</div>
-          <h1>Sign in</h1>
-          <p className="login-copy">Use your university account to continue.</p>
-          <form className="form-stack" onSubmit={submit}>
-            <label htmlFor="login-email">Email address
-              <input autoComplete="username" id="login-email" onChange={(event) => { setEmail(event.target.value); setError(''); }} placeholder="name@university.edu" required type="email" value={email} />
-            </label>
-            <label htmlFor="login-password">Password
-              <input autoComplete="current-password" id="login-password" onChange={(event) => { setPassword(event.target.value); setError(''); }} placeholder="Enter your password" required type="password" value={password} />
-            </label>
-            {error && <p className="login-error" role="alert">{error}</p>}
-            <button className="welcome-button login-submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
-          </form>
-          <div className="login-divider"><span>OR</span></div>
-          <button className="guest-sign-in" onClick={() => onSignIn({ name: 'Guest', role: 'Guest access' })} type="button">
-            Sign in without an account
-          </button>
-          <p className="privacy-note"><span aria-hidden="true">ⓘ</span> Demo sign-in only. Credentials are not verified or stored.</p>
-        </div>
-      </section>
-      <footer className="welcome-footer">MEKDELA AMBA UNIVERSITY <span>·</span> HEALTH SERVICES</footer>
-    </main>
+    <div className="signin-card">
+      <div className="login-kicker">UNIVERSITY HEALTH SERVICES</div>
+      <h2>Sign in</h2>
+      <p className="login-copy">Use your university account to continue.</p>
+      <form className="form-stack" onSubmit={submit}>
+        <label htmlFor="login-email">Email address
+          <input autoComplete="username" id="login-email" onChange={(event) => { setEmail(event.target.value); setError(''); }} placeholder="name@university.edu" required type="email" value={email} />
+        </label>
+        <label htmlFor="login-password">Password
+          <input autoComplete="current-password" id="login-password" onChange={(event) => { setPassword(event.target.value); setError(''); }} placeholder="Enter your password" required type="password" value={password} />
+        </label>
+        {error && <p className="login-error" role="alert">{error}</p>}
+        <button className="welcome-button login-submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
+      </form>
+      <div className="login-divider"><span>OR</span></div>
+      <button className="guest-sign-in" onClick={() => onSignIn({ name: 'Guest', role: 'Guest access' })} type="button">
+        Sign in without an account
+      </button>
+      <p className="privacy-note"><span aria-hidden="true">ⓘ</span> Demo sign-in only. Credentials are not verified or stored.</p>
+    </div>
   );
 }
 
