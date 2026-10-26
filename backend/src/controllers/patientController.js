@@ -1,10 +1,18 @@
 import { randomUUID } from 'node:crypto';
-import { createPatient, listPatients } from '../models/patientModel.js';
+import { createPatient, listPatientQueue, listPatients } from '../models/patientModel.js';
 
 export async function getPatients(request, response, next) {
   try {
     const search = typeof request.query.search === 'string' ? request.query.search.trim().slice(0, 100) : '';
     return response.json(await listPatients(search));
+  } catch (error) {
+    return next(error);
+  }
+}
+
+export async function getPatientQueue(_request, response, next) {
+  try {
+    return response.json(await listPatientQueue());
   } catch (error) {
     return next(error);
   }

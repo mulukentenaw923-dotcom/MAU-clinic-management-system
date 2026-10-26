@@ -35,12 +35,15 @@ CREATE TABLE IF NOT EXISTS sick_leaves (
   requested_by BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
   starts_on DATE NOT NULL,
   ends_on DATE NOT NULL,
+  diagnosis TEXT NOT NULL DEFAULT '',
   reason TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'Pending' CHECK (status IN ('Pending', 'Approved', 'Declined')),
   reviewed_by BIGINT REFERENCES users(id) ON DELETE RESTRICT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CHECK (ends_on >= starts_on)
 );
+
+ALTER TABLE sick_leaves ADD COLUMN IF NOT EXISTS diagnosis TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS medicines (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

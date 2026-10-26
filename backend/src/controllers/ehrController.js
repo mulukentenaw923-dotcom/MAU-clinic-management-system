@@ -57,21 +57,24 @@ export async function createConsultation(request, response, next) {
 
 export async function createSickLeave(request, response, next) {
   try {
-    const { patientId, startsOn, endsOn, reason } = request.body;
+    const { patientId, startsOn, endsOn, diagnosis, reason } = request.body;
+    const safeDiagnosis = typeof diagnosis === 'string' ? diagnosis.trim() : '';
     const safeReason = typeof reason === 'string' ? reason.trim() : '';
     if (!validId(String(patientId ?? '')) || !validDate(startsOn)
-        || !validDate(endsOn) || endsOn < startsOn || !safeReason || safeReason.length > 1000) {
-      return response.status(400).json({ error: 'Provide a patient, valid date range, and reason.' });
+        || !validDate(endsOn) || endsOn < startsOn || !safeDiagnosis || safeDiagnosis.length > 1000
+        || !safeReason || safeReason.length > 2000) {
+      return response.status(400).json({ error: 'Provide a patient, diagnosis, valid date range, and reason.' });
     }
     const patient = await findPatientById(String(patientId));
     if (!patient) return response.status(404).json({ error: 'Patient not found.' });
 
     const result = await pool.query(
-      `INSERT INTO sick_leaves (patient_id, requested_by, starts_on, ends_on, reason)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO sick_leaves (patient_id, requested_by, starts_on, ends_on, diagnosis, reason)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id, patient_id AS "patientId", starts_on AS "startsOn",
-                 ends_on AS "endsOn", reason, status, created_at AS "createdAt"`,
-      [patient.id, request.user.id, startsOn, endsOn, safeReason],
+                 ends_on AS "endsOn", diagnosis, reason,
+                 (ends_on - starts_on + 1) AS "totalDays", status, created_at AS "createdAt"`,
+      [patient.id, request.user.id, startsOn, endsOn, safeDiagnosis, safeReason],
     );
     return response.status(201).json(result.rows[0]);
   } catch (error) {
@@ -83,7 +86,8 @@ export async function getSickLeaves(request, response, next) {
   try {
     const result = await pool.query(
       `SELECT sl.id, sl.patient_id AS "patientId", p.name AS "patientName",
-              sl.starts_on AS "startsOn", sl.ends_on AS "endsOn", sl.reason,
+              sl.starts_on AS "startsOn", sl.ends_on AS "endsOn", sl.diagnosis, sl.reason,
+              (sl.ends_on - sl.starts_on + 1) AS "totalDays",
               sl.status, sl.created_at AS "createdAt"
        FROM sick_leaves sl JOIN patients p ON p.id = sl.patient_id
        ORDER BY sl.created_at DESC`,
@@ -105,7 +109,8 @@ export async function reviewSickLeave(request, response, next) {
       `UPDATE sick_leaves SET status = $2, reviewed_by = $3
        WHERE id = $1 AND status = 'Pending'
        RETURNING id, patient_id AS "patientId", starts_on AS "startsOn",
-                 ends_on AS "endsOn", reason, status`,
+                 ends_on AS "endsOn", diagnosis, reason,
+                 (ends_on - starts_on + 1) AS "totalDays", status`,
       [id, status, request.user.id],
     );
     if (!result.rowCount) return response.status(404).json({ error: 'Pending sick leave request not found.' });

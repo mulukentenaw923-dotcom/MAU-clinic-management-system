@@ -16,8 +16,9 @@ The health endpoint is `GET /api/health`. Set `FRONTEND_ORIGIN` to the origin se
 
 - `POST /api/auth/register` and `POST /api/auth/login`
 - `GET|POST /api/patients`
+- `GET /api/patients/queue` for active waiting and in-consultation patients
 - `POST /api/ehr/consultations`
-- `GET|POST /api/ehr/sick-leaves`
+- `GET|POST /api/ehr/sick-leaves` (creation requires patient, diagnosis, date range, and reason)
 - `PATCH /api/ehr/sick-leaves/:id` to approve or decline a pending request
 - `GET|POST /api/inventory`
 - `PATCH|DELETE /api/inventory/:id`

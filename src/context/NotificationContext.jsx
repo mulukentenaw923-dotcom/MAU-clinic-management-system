@@ -1,6 +1,4 @@
-import { createContext, useContext } from 'react';
-
-const NotificationContext = createContext(null);
+import { NotificationContext } from './notification-context.js';
 
 export function NotificationProvider({ children, value = null }) {
   return (
@@ -8,8 +6,4 @@ export function NotificationProvider({ children, value = null }) {
       {children}
     </NotificationContext.Provider>
   );
-}
-
-export function useNotificationContext() {
-  return useContext(NotificationContext);
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const STORAGE_KEY = 'mekdela-clinic-demo-data';
 const SEED_DATA = {
@@ -23,10 +23,10 @@ const SEED_DATA = {
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Overview', icon: '⌂' },
-  { id: 'doctor', label: 'Doctor', icon: '✚' },
-  { id: 'patients', label: 'Patients', icon: '♡' },
+  { id: 'doctor', label: 'Doctor EHR', icon: '✚' },
+  { id: 'patients', label: 'Patients Directory', icon: '♡' },
   { id: 'pharmacy', label: 'Pharmacy', icon: '⚕' },
-  { id: 'leave', label: 'Sick leave', icon: '▤' },
+  { id: 'leave', label: 'Sick Leave Certificate Generator', icon: '▤' },
 ];
 
 function readSavedData() {
@@ -49,28 +49,28 @@ function today() {
 
 function App() {
   const [data, setData] = useState(readSavedData);
+  const currentData = useRef(data);
   const [page, setPage] = useState('dashboard');
   const [user, setUser] = useState(null);
   const [notice, setNotice] = useState('');
 
-  useEffect(() => {
+  function updateData(updater) {
+    const nextData = typeof updater === 'function' ? updater(currentData.current) : updater;
+    currentData.current = nextData;
+    setData(nextData);
     try {
-      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextData));
     } catch (error) {
       console.error('Could not save demo clinic data to local storage.', error);
       setNotice('Local storage is unavailable. Changes may not persist after refresh.');
     }
-  }, [data]);
+  }
 
   useEffect(() => {
     if (!notice) return undefined;
     const timer = window.setTimeout(() => setNotice(''), 4000);
     return () => window.clearTimeout(timer);
   }, [notice]);
-
-  function updateData(updater) {
-    setData((current) => typeof updater === 'function' ? updater(current) : updater);
-  }
 
   if (!user) {
     return <WelcomePage onSignIn={setUser} />;
@@ -132,6 +132,18 @@ function WelcomePage({ onSignIn }) {
   return (
     <main className="welcome-screen">
       <section className="welcome-layout">
+        <div className="welcome-hero">
+          <img alt="Mekdela Amba University campus" className="welcome-hero-image" src="/clinic-campus.png" />
+          <div className="welcome-hero-shade" />
+          <div className="welcome-hero-content">
+            <span className="welcome-hero-mark" aria-hidden="true">✚</span>
+            <div className="welcome-hero-kicker">MEKDELA AMBA UNIVERSITY</div>
+            <h2>Care for our campus community.</h2>
+            <p>Clinic Management System</p>
+            <span className="welcome-hero-rule" />
+          </div>
+          <span className="welcome-hero-caption">A healthier community starts here</span>
+        </div>
         <SignInForm onSignIn={onSignIn} />
       </section>
     </main>
@@ -279,10 +291,16 @@ function PatientsPage({ data, updateData, notify }) {
   const [status, setStatus] = useState('All statuses');
   const [showForm, setShowForm] = useState(false);
   const [selected, setSelected] = useState(null);
+  const [patientToRemove, setPatientToRemove] = useState(null);
   const patients = data.patients.filter((patient) => {
     const matchQuery = `${patient.name} ${patient.id} ${patient.phone}`.toLowerCase().includes(query.toLowerCase());
     return matchQuery && (status === 'All statuses' || patient.status === status);
   });
+  function hasPatientHistory(patient) {
+    return patient.visits?.length > 0
+      || data.leaves.some((leave) => leave.patientId === patient.id)
+      || data.prescriptions.some((prescription) => prescription.patientId === patient.id);
+  }
   function addPatient(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
@@ -291,12 +309,32 @@ function PatientsPage({ data, updateData, notify }) {
     setShowForm(false);
     notify(`${patient.name} added to the patient list.`);
   }
+  function removePatient(patient) {
+    if (hasPatientHistory(patient)) {
+      setPatientToRemove(null);
+      notify('This patient has medical or sick-leave history and cannot be removed.');
+      return;
+    }
+    updateData((current) => ({
+      ...current,
+      patients: current.patients.filter((item) => item.id !== patient.id),
+    }));
+    setPatientToRemove(null);
+    notify(`${patient.name} removed from the patient list.`);
+  }
+  function requestPatientRemoval(patient) {
+    if (hasPatientHistory(patient)) {
+      notify('This patient has medical or sick-leave history and cannot be removed.');
+      return;
+    }
+    setPatientToRemove(patient);
+  }
   return (
     <>
       <PageHeading className="patients-page-heading" eyebrow="CARE DIRECTORY" title="Patients" description="Search and manage your clinic’s patient records." action={<button className="button button-primary add-patient-button" onClick={() => setShowForm(true)} type="button"><span aria-hidden="true">＋</span> Add patient</button>} />
       <section className="panel">
         <div className="toolbar"><label className="search-box"><span aria-hidden="true">⌕</span><input aria-label="Search patients" onChange={(event) => setQuery(event.target.value)} placeholder="Search name, patient ID or phone" value={query} /></label><select aria-label="Filter by status" className="filter-select" onChange={(event) => setStatus(event.target.value)} value={status}><option>All statuses</option><option>Waiting</option><option>In consultation</option><option>Completed</option></select><span className="result-count">{patients.length} patients</span></div>
-        <div className="table-wrap"><table><thead><tr><th>Patient</th><th>Patient ID</th><th>Age / Sex</th><th>Phone</th><th>Status</th><th></th></tr></thead><tbody>{patients.map((patient) => <tr key={patient.id}><td><button className="patient-link" onClick={() => setSelected(patient)} type="button"><span className="avatar table-avatar">{patient.name.slice(0, 1)}</span><strong>{patient.name}</strong></button></td><td className="muted-cell">{patient.id}</td><td>{patient.age} <span className="muted-cell">/ {patient.sex}</span></td><td>{patient.phone}</td><td><StatusBadge value={patient.status} /></td><td><button aria-label={`View ${patient.name}`} className="row-action" onClick={() => setSelected(patient)} type="button">View ↗</button></td></tr>)}</tbody></table>{patients.length === 0 && <EmptyState title="No patients found" body="Try another search or add a patient record." />}</div>
+        <div className="table-wrap"><table><thead><tr><th>Patient</th><th>Patient ID</th><th>Age / Sex</th><th>Phone</th><th>Status</th><th>Actions</th></tr></thead><tbody>{patients.map((patient) => <tr key={patient.id}><td><button className="patient-link" onClick={() => setSelected(patient)} type="button"><span className="avatar table-avatar">{patient.name.slice(0, 1)}</span><strong>{patient.name}</strong></button></td><td className="muted-cell">{patient.id}</td><td>{patient.age} <span className="muted-cell">/ {patient.sex}</span></td><td>{patient.phone}</td><td><StatusBadge value={patient.status} /></td><td className="patient-actions"><button aria-label={`View ${patient.name}`} className="row-action" onClick={() => setSelected(patient)} type="button">View ↗</button><button aria-label={`Remove ${patient.name}`} className="row-action patient-remove" onClick={() => requestPatientRemoval(patient)} type="button">Remove</button></td></tr>)}</tbody></table>{patients.length === 0 && <EmptyState title="No patients found" body="Try another search or add a patient record." />}</div>
       </section>
       {showForm && (
         <Modal className="patient-form-modal" title="Register a patient" onClose={() => setShowForm(false)}>
@@ -318,6 +356,15 @@ function PatientsPage({ data, updateData, notify }) {
               <button className="button button-primary" type="submit"><span aria-hidden="true">＋</span> Save patient</button>
             </div>
           </form>
+        </Modal>
+      )}
+      {patientToRemove && (
+        <Modal title="Remove this patient?" onClose={() => setPatientToRemove(null)}>
+          <p className="confirm-copy">Remove {patientToRemove.name} from the patient list? This cannot be undone.</p>
+          <div className="form-actions">
+            <button className="button button-quiet" onClick={() => setPatientToRemove(null)} type="button">Cancel</button>
+            <button className="button button-danger" onClick={() => removePatient(patientToRemove)} type="button">Remove patient</button>
+          </div>
         </Modal>
       )}
       {selected && <Modal title="Patient record" onClose={() => setSelected(null)}><div className="patient-record"><div className="record-person"><span className="avatar record-avatar">{selected.name.slice(0, 1)}</span><div><h3>{selected.name}</h3><p>{selected.id} · {selected.age} years · {selected.sex}</p></div></div><div className="record-line"><span>Phone</span><strong>{selected.phone}</strong></div><div className="record-line"><span>Queue status</span><StatusBadge value={selected.status} /></div><h4>Consultation history</h4>{selected.visits?.length ? selected.visits.map((visit) => <div className="visit-note" key={visit.id}><strong>{visit.date}</strong><p>{visit.diagnosis}</p><small>{visit.notes}</small></div>) : <p className="empty-history">No consultation notes have been recorded.</p>}</div></Modal>}
@@ -427,35 +474,154 @@ function ConsultationsPage({ data, updateData, notify }) {
 
 function LeavePage({ data, updateData, notify }) {
   const [showForm, setShowForm] = useState(false);
+  const [selectedPatientId, setSelectedPatientId] = useState('');
+  const [startsOn, setStartsOn] = useState(today());
+  const [endsOn, setEndsOn] = useState(today());
+  const [diagnosis, setDiagnosis] = useState('');
+  const [reason, setReason] = useState('');
+  const [certificate, setCertificate] = useState(null);
+  const [selectedCertificateId, setSelectedCertificateId] = useState('');
+  const selectedPatient = data.patients.find((patient) => patient.id === selectedPatientId);
+  const previewLeave = {
+    id: 'PREVIEW',
+    patientId: selectedPatient?.id || '',
+    patientName: selectedPatient?.name || '',
+    from: startsOn,
+    to: endsOn,
+    diagnosis,
+    reason,
+    status: 'Pending',
+    created: today(),
+  };
+  const leaveDays = calculateLeaveDays(startsOn, endsOn);
   function requestLeave(event) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     const patient = data.patients.find((item) => item.id === form.get('patientId'));
-    if (!patient) return;
-    const leave = { id: makeId('SL'), patientId: patient.id, patientName: patient.name, from: form.get('from'), to: form.get('to'), reason: form.get('reason').trim(), status: 'Pending', created: today() };
+    const formDiagnosis = String(form.get('diagnosis') || '').trim();
+    const formReason = String(form.get('reason') || '').trim();
+    const from = String(form.get('from') || '');
+    const to = String(form.get('to') || '');
+    if (!patient || !formDiagnosis || !formReason || !validDateRange(from, to)) {
+      notify('Enter the patient, diagnosis, reason, and a valid date range.');
+      return;
+    }
+    const leave = { id: makeId('SL'), patientId: patient.id, patientName: patient.name, from, to, diagnosis: formDiagnosis, reason: formReason, status: 'Pending', created: today() };
     updateData((current) => ({ ...current, leaves: [leave, ...current.leaves] }));
     setShowForm(false);
+    setSelectedPatientId('');
+    setStartsOn(today());
+    setEndsOn(today());
+    setDiagnosis('');
+    setReason('');
     notify('Sick leave request submitted for review.');
   }
   function decide(id, status) {
     updateData((current) => ({ ...current, leaves: current.leaves.map((leave) => leave.id === id ? { ...leave, status } : leave) }));
+    if (status === 'Approved') setSelectedCertificateId(id);
     notify(`Request ${status.toLowerCase()}.`);
   }
   const pending = data.leaves.filter((leave) => leave.status === 'Pending');
   const reviewed = data.leaves.filter((leave) => leave.status !== 'Pending');
+  const selectedCertificate = reviewed.find((leave) => leave.id === selectedCertificateId)
+    || reviewed.find((leave) => leave.status === 'Approved')
+    || reviewed[0]
+    || null;
   return (
     <>
       <PageHeading eyebrow="STUDENT HEALTH SERVICES" title="Sick leave" description="Create requests and review medical leave certificates." action={<button className="button button-primary" onClick={() => setShowForm(true)} type="button"><span>＋</span> New request</button>} />
       <div className="leave-overview"><span className="leave-overview-icon">▤</span><div><strong>{pending.length} request{pending.length === 1 ? '' : 's'} awaiting review</strong><p>Approved certificates can be printed for the patient.</p></div></div>
       <section className="panel"><div className="panel-heading"><div><h2>Requests to review</h2><p>Review details before approving or declining</p></div></div>{pending.length ? <div className="leave-list">{pending.map((leave) => <LeaveCard key={leave.id} leave={leave} onDecide={decide} />)}</div> : <EmptyState title="Nothing to review" body="New leave requests will appear here." />}</section>
-      <section className="panel reviewed-panel"><div className="panel-heading"><div><h2>Reviewed requests</h2><p>Previously approved or declined</p></div></div>{reviewed.length ? <div className="table-wrap"><table><thead><tr><th>Patient</th><th>Dates</th><th>Reason</th><th>Status</th><th></th></tr></thead><tbody>{reviewed.map((leave) => <tr key={leave.id}><td><strong>{leave.patientName}</strong><div className="muted-cell">{leave.id}</div></td><td>{leave.from} — {leave.to}</td><td>{leave.reason}</td><td><StatusBadge value={leave.status} /></td><td>{leave.status === 'Approved' && <button className="row-action" onClick={() => window.print()} type="button">Print certificate ↗</button>}</td></tr>)}</tbody></table></div> : <EmptyState title="No reviewed requests yet" body="Approved and declined requests will be listed here." />}</section>
-      {showForm && <Modal title="New sick leave request" onClose={() => setShowForm(false)}><form className="form-stack" onSubmit={requestLeave}><label>Patient<select name="patientId" required defaultValue=""><option disabled value="">Select a patient</option>{data.patients.map((patient) => <option key={patient.id} value={patient.id}>{patient.name} ({patient.id})</option>)}</select></label><div className="form-row"><label>From<input min={today()} name="from" required type="date" /></label><label>To<input min={today()} name="to" required type="date" /></label></div><label>Medical reason<input name="reason" placeholder="Brief reason for leave" required /></label><div className="form-actions"><button className="button button-quiet" onClick={() => setShowForm(false)} type="button">Cancel</button><button className="button button-primary" type="submit">Submit request</button></div></form></Modal>}
+      <section className="panel reviewed-panel"><div className="panel-heading"><div><h2>Reviewed requests</h2><p>Previously approved or declined</p></div></div>{reviewed.length ? <div className="table-wrap"><table><thead><tr><th>Patient</th><th>Reference code</th><th>Approved dates</th><th>Diagnosis</th><th>Status</th><th></th></tr></thead><tbody>{reviewed.map((leave) => <tr key={leave.id}><td><strong>{leave.patientName}</strong></td><td className="muted-cell">{leave.id}</td><td>{leave.from} — {leave.to}</td><td>{leave.diagnosis || leave.reason}</td><td><StatusBadge value={leave.status} /></td><td>{leave.status === 'Approved' && <button className="row-action" onClick={() => { setSelectedCertificateId(leave.id); setCertificate(leave); }} type="button">Preview / print ↗</button>}</td></tr>)}</tbody></table></div> : <EmptyState title="No reviewed requests yet" body="Approved and declined requests will be listed here." />}</section>
+      <section className="panel leave-certificate-panel mt-6">
+        <div className="panel-heading">
+          <div><h2>Medical certificate preview</h2><p>{selectedCertificate?.status === 'Approved' ? 'Approved certificate ready to preview and print.' : 'A certificate preview will be available after a request is approved.'}</p></div>
+          {selectedCertificate?.status === 'Approved' && <button className="button button-primary" onClick={() => setCertificate(selectedCertificate)} type="button">Preview / print ↗</button>}
+        </div>
+        {selectedCertificate
+          ? <SickLeaveCertificate leave={selectedCertificate} patient={data.patients.find((patient) => patient.id === selectedCertificate.patientId)} />
+          : <EmptyState title="No approved certificates yet" body="Approve a sick leave request to prepare its certificate here." />}
+      </section>
+      {showForm && (
+        <Modal className="leave-request-modal" title="New sick leave request" onClose={() => setShowForm(false)}>
+          <div className="leave-request-layout">
+            <form className="form-stack leave-request-form" onSubmit={requestLeave}>
+              <p className="leave-form-intro">Complete the request details. The certificate preview updates as you type.</p>
+              <label>Patient<select name="patientId" required value={selectedPatientId} onChange={(event) => setSelectedPatientId(event.target.value)}><option disabled value="">Select a patient</option>{data.patients.map((patient) => <option key={patient.id} value={patient.id}>{patient.name} ({patient.id})</option>)}</select></label>
+              <label>Diagnosis<input name="diagnosis" onChange={(event) => setDiagnosis(event.target.value)} placeholder="Enter the clinical diagnosis" required value={diagnosis} /></label>
+              <div className="form-row"><label>From<input min={today()} name="from" onChange={(event) => { const nextStart = event.target.value; setStartsOn(nextStart); if (endsOn < nextStart) setEndsOn(nextStart); }} required type="date" value={startsOn} /></label><label>To<input min={startsOn || today()} name="to" onChange={(event) => setEndsOn(event.target.value)} required type="date" value={endsOn} /></label></div>
+              <label>Medical reason / notes<textarea name="reason" onChange={(event) => setReason(event.target.value)} placeholder="Brief supporting details" required rows="3" value={reason} /></label>
+              <div className="leave-request-meta"><span>Leave duration</span><strong>{leaveDays > 0 ? `${leaveDays} day${leaveDays === 1 ? '' : 's'}` : 'Choose a valid period'}</strong></div>
+              <div className="form-actions"><button className="button button-quiet" onClick={() => setShowForm(false)} type="button">Cancel</button><button className="button button-primary" type="submit">Submit request</button></div>
+            </form>
+            <div className="leave-preview-column"><div className="leave-preview-heading"><span>LIVE PREVIEW</span><small>Demo certificate · not official</small></div><SickLeaveCertificate leave={previewLeave} patient={selectedPatient} preview /></div>
+          </div>
+        </Modal>
+      )}
+      {certificate && (
+        <Modal className="certificate-modal" backdropClassName="certificate-modal-backdrop" title="Sick leave certificate" onClose={() => setCertificate(null)}>
+          <SickLeaveCertificate leave={certificate} patient={data.patients.find((patient) => patient.id === certificate.patientId)} />
+          <div className="form-actions certificate-print-actions"><button className="button button-quiet" onClick={() => setCertificate(null)} type="button">Close</button><button className="button button-primary" onClick={() => window.print()} type="button">Print certificate</button></div>
+        </Modal>
+      )}
     </>
   );
 }
 
+function calculateLeaveDays(from, to) {
+  if (!validDateRange(from, to)) return 0;
+  return Math.floor((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86400000) + 1;
+}
+
+function validDateRange(from, to) {
+  function validDate(value) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const date = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
+  }
+  return validDate(from) && validDate(to) && to >= from;
+}
+
+function SickLeaveCertificate({ leave, patient, preview = false }) {
+  const from = leave.from || leave.startsOn || '';
+  const to = leave.to || leave.endsOn || '';
+  const patientName = patient?.name || leave.patientName || 'Patient name';
+  const patientId = patient?.id || leave.patientId || 'Patient ID';
+  const diagnosis = leave.diagnosis || leave.reason || 'Diagnosis will appear here';
+  const dateLabel = (value) => value
+    ? new Intl.DateTimeFormat('en', { dateStyle: 'long', timeZone: 'UTC' }).format(new Date(`${value}T00:00:00Z`))
+    : '—';
+  const issueDate = leave.created || leave.createdAt?.slice(0, 10) || today();
+  return (
+    <article className={`certificate-sheet ${preview ? 'certificate-preview' : ''}`}>
+      <div className="certificate-watermark">DEMO</div>
+      <header className="certificate-header">
+        <span className="certificate-brand-mark" aria-hidden="true">MA</span>
+        <div><strong>MEKDELA AMBA UNIVERSITY</strong><span>Student &amp; Staff Health Directorate</span></div>
+      </header>
+      <div className="certificate-rule" />
+      <div className="certificate-title-block"><span>STUDENT HEALTH SERVICES</span><h3>SICK LEAVE CERTIFICATE</h3><small>Certificate no. {leave.id || '—'}</small></div>
+      <p className="certificate-intro">This is to certify that the following patient was assessed by the University Clinic:</p>
+      <div className="certificate-fields">
+        <div><span>Patient name</span><strong>{patientName}</strong></div>
+        <div><span>Patient ID</span><strong>{patientId}</strong></div>
+        <div><span>Age / Sex</span><strong>{patient ? `${patient.age} years / ${patient.sex}` : '—'}</strong></div>
+        <div><span>Issue date</span><strong>{dateLabel(issueDate)}</strong></div>
+        <div className="certificate-field-wide"><span>Diagnosis</span><strong>{diagnosis}</strong></div>
+        <div className="certificate-field-wide"><span>Medical notes</span><strong>{leave.reason || '—'}</strong></div>
+        <div><span>Leave begins</span><strong>{dateLabel(from)}</strong></div>
+        <div><span>Leave ends</span><strong>{dateLabel(to)}</strong></div>
+      </div>
+      <div className="certificate-duration"><span>{leave.status === 'Approved' ? 'APPROVED REST PERIOD' : 'REQUESTED REST PERIOD'}</span><strong>{calculateLeaveDays(from, to) || '—'} <small>day{calculateLeaveDays(from, to) === 1 ? '' : 's'}</small></strong></div>
+      <p className="certificate-statement">The patient is advised to rest during the period stated above. This document is a demonstration preview and is not an official medical certificate.</p>
+      <footer className="certificate-signatures"><div><span className="signature-line" /><strong>Clinic Medical Officer</strong><small>Authorized health professional</small></div><div className="certificate-seal"><span>UNIVERSITY<br />CLINIC</span><small>SEAL</small></div></footer>
+      <div className="certificate-status"><span>Status</span><strong>{preview ? 'PREVIEW · PENDING' : leave.status.toUpperCase()}</strong></div>
+    </article>
+  );
+}
+
 function LeaveCard({ leave, onDecide }) {
-  return <article className="leave-card"><div className="leave-person"><span className="avatar table-avatar">{leave.patientName.slice(0, 1)}</span><div><strong>{leave.patientName}</strong><small>{leave.id} · Submitted {leave.created}</small></div></div><div className="leave-dates"><small>REQUESTED PERIOD</small><strong>{leave.from} <span>→</span> {leave.to}</strong></div><div className="leave-reason"><small>REASON</small><span>{leave.reason}</span></div><div className="leave-actions"><button className="button button-quiet button-danger" onClick={() => onDecide(leave.id, 'Declined')} type="button">Decline</button><button className="button button-primary" onClick={() => onDecide(leave.id, 'Approved')} type="button">Approve</button></div></article>;
+  return <article className="leave-card"><div className="leave-person"><span className="avatar table-avatar">{leave.patientName.slice(0, 1)}</span><div><strong>{leave.patientName}</strong><small>{leave.id} · Submitted {leave.created}</small></div></div><div className="leave-dates"><small>REQUESTED PERIOD · {calculateLeaveDays(leave.from, leave.to)} DAYS</small><strong>{leave.from} <span>→</span> {leave.to}</strong></div><div className="leave-reason"><small>DIAGNOSIS</small><span>{leave.diagnosis || leave.reason}</span></div><div className="leave-actions"><button className="button button-quiet button-danger" onClick={() => onDecide(leave.id, 'Declined')} type="button">Decline</button><button className="button button-primary" onClick={() => onDecide(leave.id, 'Approved')} type="button">Approve</button></div></article>;
 }
 
 function PharmacyPage({ data, updateData, notify }) {
@@ -532,13 +698,13 @@ function EmptyState({ title, body }) {
   return <div className="empty-state"><span className="empty-icon">⌕</span><strong>{title}</strong><p>{body}</p></div>;
 }
 
-function Modal({ title, onClose, children, className = '' }) {
+function Modal({ title, onClose, children, className = '', backdropClassName = '' }) {
   useEffect(() => {
     function onKeyDown(event) { if (event.key === 'Escape') onClose(); }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [onClose]);
-  return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section aria-labelledby="modal-title" aria-modal="true" className={`modal-card ${className}`} role="dialog"><div className="modal-heading"><h2 id="modal-title">{title}</h2><button aria-label="Close dialog" className="icon-button" onClick={onClose} type="button">×</button></div>{children}</section></div>;
+  return <div className={`modal-backdrop ${backdropClassName}`} onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section aria-labelledby="modal-title" aria-modal="true" className={`modal-card ${className}`} role="dialog"><div className="modal-heading"><h2 id="modal-title">{title}</h2><button aria-label="Close dialog" className="icon-button" onClick={onClose} type="button">×</button></div>{children}</section></div>;
 }
 
 export default App;

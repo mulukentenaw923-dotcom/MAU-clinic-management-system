@@ -40,6 +40,7 @@ app.use('/api/inventory', inventoryRoutes);
 
 app.use((_request, response) => response.status(404).json({ error: 'Route not found.' }));
 app.use((error, _request, response, _next) => {
+  void _next;
   console.error('API request failed.', error);
   if (error.code === '23505') {
     return response.status(409).json({ error: 'A record with those details already exists.' });

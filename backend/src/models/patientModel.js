@@ -12,6 +12,17 @@ export async function listPatients(search = '') {
   return result.rows;
 }
 
+export async function listPatientQueue() {
+  const result = await pool.query(
+    `SELECT id, patient_number AS "patientNumber", name, age, sex, phone, status,
+            created_at AS "createdAt"
+     FROM patients
+     WHERE status IN ('Waiting', 'In consultation')
+     ORDER BY CASE status WHEN 'In consultation' THEN 0 ELSE 1 END, created_at ASC`,
+  );
+  return result.rows;
+}
+
 export async function createPatient({ patientNumber, name, age, sex, phone }) {
   const result = await pool.query(
     `INSERT INTO patients (patient_number, name, age, sex, phone)

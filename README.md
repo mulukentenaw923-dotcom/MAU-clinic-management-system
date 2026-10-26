@@ -1,20 +1,46 @@
-<<<<<<< HEAD
-# React + Vite
+﻿# MAU Clinic Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A clinic management dashboard with a React frontend and an Express/PostgreSQL backend for patient, consultation, pharmacy, and leave workflows.
 
-Currently, two official plugins are available:
+## Project structure
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- `src/` — React frontend
+- `public/` — static assets
+- `backend/src/` — Express API and PostgreSQL models
 
-## React Compiler
+## Prerequisites
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- Node.js 18+
+- PostgreSQL running locally on port 5432
 
-## Expanding the ESLint configuration
+## Frontend
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-=======
-# MAU-clinic-management-system
->>>>>>> 2b0595708b001162c4edd71c7bda642029b75ae8
+```bash
+npm install
+npm run dev
+```
+
+The frontend runs at http://localhost:5173.
+
+## Backend
+
+```bash
+cd backend
+npm install
+cp .env.example .env
+npm run dev
+```
+
+The API runs at http://localhost:4000.
+
+### Default local database config
+
+The local development env is configured for PostgreSQL on `localhost:5432` with the database `mau_clinic`.
+
+## Useful scripts
+
+```bash
+npm run build
+npm run lint
+cd backend && npm run db:setup
+```

@@ -37,7 +37,12 @@ export async function login(request, response, next) {
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
       return response.status(401).json({ error: 'Email or password is incorrect.' });
     }
-    const { password_hash: _passwordHash, ...safeUser } = user;
+    const safeUser = {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
     return response.json({ user: safeUser, accessToken: signAccessToken(user) });
   } catch (error) {
     return next(error);
