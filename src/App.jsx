@@ -1,4 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
+import {
+  BadgeCheck,
+  CircleDollarSign,
+  Clock3,
+  FileText,
+  LayoutDashboard,
+  Pill,
+  ReceiptText,
+  Search,
+  ShieldCheck,
+  Stethoscope,
+  UsersRound,
+} from 'lucide-react';
+import Header from './components/Header.jsx';
 
 const STORAGE_KEY = 'mekdela-clinic-demo-data';
 const SEED_DATA = {
@@ -18,15 +32,17 @@ const SEED_DATA = {
     { id: 'SL-207', patientId: 'P-1047', patientName: 'Dawit Alemu', from: '2026-10-26', to: '2026-10-28', reason: 'Acute illness', status: 'Pending', created: '2026-10-26' },
   ],
   prescriptions: [],
+  payments: [],
   doctors: [],
 };
 
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Overview', icon: '⌂' },
-  { id: 'doctor', label: 'Doctor EHR', icon: '✚' },
-  { id: 'patients', label: 'Patients Directory', icon: '♡' },
-  { id: 'pharmacy', label: 'Pharmacy', icon: '⚕' },
-  { id: 'leave', label: 'Sick Leave Certificate Generator', icon: '▤' },
+  { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+  { id: 'doctor', label: 'Doctor EHR', icon: Stethoscope },
+  { id: 'patients', label: 'Patients Directory', icon: UsersRound },
+  { id: 'pharmacy', label: 'Pharmacy', icon: Pill },
+  { id: 'payments', label: 'Payments & Billing', icon: ReceiptText },
+  { id: 'leave', label: 'Sick Leave Certificate Generator', icon: FileText },
 ];
 
 function readSavedData() {
@@ -53,6 +69,17 @@ function App() {
   const [page, setPage] = useState('dashboard');
   const [user, setUser] = useState(null);
   const [notice, setNotice] = useState('');
+
+  function logout() {
+    try {
+      window.localStorage.removeItem('token');
+      window.localStorage.removeItem('user');
+    } catch (error) {
+      console.error('Could not clear saved authentication data.', error);
+    }
+    setPage('dashboard');
+    setUser(null);
+  }
 
   function updateData(updater) {
     const nextData = typeof updater === 'function' ? updater(currentData.current) : updater;
@@ -87,7 +114,7 @@ function App() {
         <nav className="side-nav" aria-label="Main navigation">
           {NAV_ITEMS.map((item) => (
             <button aria-current={page === item.id ? 'page' : undefined} className={`nav-item ${page === item.id ? 'active' : ''}`} key={item.id} onClick={() => setPage(item.id)} type="button">
-              <span className="nav-icon" aria-hidden="true">{item.icon}</span>{item.label}
+              <span className="nav-icon" aria-hidden="true"><item.icon size={18} strokeWidth={1.8} /></span>{item.label}
               {item.id === 'leave' && data.leaves.some((leave) => leave.status === 'Pending') && <span className="nav-dot" />}
             </button>
           ))}
@@ -96,7 +123,7 @@ function App() {
           <button className="demo-callout" onClick={() => setPage('dashboard')} type="button" aria-label="Demo workspace, return to overview">
             <span className="status-dot" /> Demo workspace <small>Sample records only</small>
           </button>
-          <button className="profile-button" onClick={() => setUser(null)} type="button" aria-label="Log out">
+          <button className="profile-button" onClick={logout} type="button" aria-label="Log out">
             <span className="avatar">{user.name.slice(0, 1).toUpperCase()}</span>
             <span className="profile-info"><strong>{user.name}</strong><small>{user.role}</small></span>
             <span className="logout-label"><span aria-hidden="true">↪</span> Log out</span>
@@ -105,22 +132,20 @@ function App() {
       </aside>
 
       <main className="main-area">
-        <header className="topbar">
-          <div className="mobile-brand"><span className="brand-mark"><img alt="" src="/logo-mekdela-amba.png" /></span><strong>Mekdela Amba University</strong></div>
-          <div className="breadcrumb">Clinic <span>/</span> <strong>{NAV_ITEMS.find((item) => item.id === page)?.label}</strong></div>
-          <div className="topbar-right">
-            <span className="today-label">{new Intl.DateTimeFormat('en', { dateStyle: 'full' }).format(new Date())}</span>
-            <span className="avatar avatar-small">{user.name.slice(0, 1).toUpperCase()}</span>
-            <button className="topbar-logout" onClick={() => setUser(null)} type="button"><span aria-hidden="true">↪</span> Log out</button>
-          </div>
-        </header>
+        <Header
+          onLogout={logout}
+          title={NAV_ITEMS.find((item) => item.id === page)?.label ?? 'Overview'}
+          userName={user.name}
+          userRole={user.role}
+        />
         {notice && <div className="toast" role="status">{notice}<button onClick={() => setNotice('')} type="button" aria-label="Dismiss notification">×</button></div>}
-        <div className="content">
+        <div className="content page-transition" key={page}>
           {page === 'dashboard' && <Dashboard data={data} onNavigate={setPage} />}
           {page === 'patients' && <PatientsPage data={data} updateData={updateData} notify={setNotice} />}
           {page === 'doctor' && <ConsultationsPage data={data} updateData={updateData} notify={setNotice} />}
           {page === 'leave' && <LeavePage data={data} updateData={updateData} notify={setNotice} />}
           {page === 'pharmacy' && <PharmacyPage data={data} updateData={updateData} notify={setNotice} />}
+          {page === 'payments' && <PaymentsPage data={data} updateData={updateData} notify={setNotice} />}
           <footer className="app-footer"><span>MA</span> Mekdela Amba University <span className="footer-separator">·</span> Demo environment — do not enter real patient information</footer>
         </div>
       </main>
@@ -155,6 +180,7 @@ function SignInForm({ onSignIn }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('Doctor');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
 
@@ -170,7 +196,7 @@ function SignInForm({ onSignIn }) {
     }
     onSignIn({
       name: isCreatingAccount ? trimmedName : trimmedEmail.split('@')[0],
-      role: 'University staff',
+      role,
     });
   }
 
@@ -178,7 +204,7 @@ function SignInForm({ onSignIn }) {
     <div className="signin-card">
       <h1>{isCreatingAccount ? 'Create an account' : 'Welcome to Mekdela Amba University'}</h1>
       <p className="login-copy">
-        {isCreatingAccount ? 'Create a staff profile to access the clinic dashboard.' : 'Clinic Management System · Sign in to access your clinic dashboard.'}
+        {isCreatingAccount ? 'Choose your role and create a demo profile.' : 'Clinic Management System · Sign in to access your clinic dashboard.'}
       </p>
       <form className="form-stack" onSubmit={submit}>
         {isCreatingAccount && (
@@ -194,6 +220,14 @@ function SignInForm({ onSignIn }) {
             </svg>
             <input autoComplete={isCreatingAccount ? 'email' : 'username'} id="login-email" onChange={(event) => { setEmail(event.target.value); setError(''); }} placeholder="name@university.edu" required type="email" value={email} />
           </span>
+        </label>
+        <label htmlFor="login-role">Role
+          <select id="login-role" onChange={(event) => setRole(event.target.value)} value={role}>
+            <option>Doctor</option>
+            <option>Pharmacist</option>
+            <option>Patient</option>
+            <option>Admin</option>
+          </select>
         </label>
         <div className="password-field">
           <label htmlFor="login-password">Password</label>
@@ -273,7 +307,7 @@ function Dashboard({ data, onNavigate }) {
           {lowStock.length ? lowStock.slice(0, 3).map((item) => <div className="stock-watch" key={item.id}><span className="medicine-icon">Rx</span><span className="stock-name"><strong>{item.name}</strong><small>Reorder at {item.reorder} units</small></span><span className="stock-count">{item.quantity} left</span></div>) : <EmptyState title="Stock levels look good" body="No items are below their reorder level." />}
         </section>
       </div>
-      <section className="panel quick-panel"><div className="panel-heading"><div><h2>Quick actions</h2><p>Jump into a common clinic task</p></div></div><div className="quick-actions"><QuickAction icon="✚" title="Start consultation" onClick={() => onNavigate('doctor')} /><QuickAction icon="＋" title="Register patient" onClick={() => onNavigate('patients')} /><QuickAction icon="⚕" title="Dispense medicine" onClick={() => onNavigate('pharmacy')} /><QuickAction icon="▤" title="Review sick leave" onClick={() => onNavigate('leave')} /></div></section>
+      <section className="panel quick-panel"><div className="panel-heading"><div><h2>Quick actions</h2><p>Jump into a common clinic task</p></div></div><div className="quick-actions"><QuickAction icon="✚" title="Start consultation" onClick={() => onNavigate('doctor')} /><QuickAction icon="＋" title="Register patient" onClick={() => onNavigate('patients')} /><QuickAction icon="⚕" title="Dispense medicine" onClick={() => onNavigate('pharmacy')} /><QuickAction icon={<ReceiptText aria-hidden="true" size={18} />} title="Create invoice" onClick={() => onNavigate('payments')} /><QuickAction icon="▤" title="Review sick leave" onClick={() => onNavigate('leave')} /></div></section>
     </>
   );
 }
@@ -299,7 +333,8 @@ function PatientsPage({ data, updateData, notify }) {
   function hasPatientHistory(patient) {
     return patient.visits?.length > 0
       || data.leaves.some((leave) => leave.patientId === patient.id)
-      || data.prescriptions.some((prescription) => prescription.patientId === patient.id);
+      || data.prescriptions.some((prescription) => prescription.patientId === patient.id)
+      || data.payments.some((payment) => payment.patientId === patient.id);
   }
   function addPatient(event) {
     event.preventDefault();
@@ -683,6 +718,129 @@ function PharmacyPage({ data, updateData, notify }) {
       {medicineToRemove && <Modal title="Remove medicine?" onClose={() => setMedicineToRemove(null)}><p className="confirm-copy">Remove {medicineToRemove.name} from the inventory? This cannot be undone.</p><div className="form-actions"><button className="button button-quiet" onClick={() => setMedicineToRemove(null)} type="button">Cancel</button><button className="button button-danger" onClick={removeMedicine} type="button">Remove medicine</button></div></Modal>}
     </>
   );
+}
+
+function PaymentsPage({ data, updateData, notify }) {
+  const [query, setQuery] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('All');
+  const payments = data.payments;
+  const getStatus = (payment) => payment.status || 'Paid';
+  const totalRevenue = payments
+    .filter((payment) => getStatus(payment) === 'Paid')
+    .reduce((sum, payment) => sum + Number(payment.amount), 0);
+  const pendingTotal = payments
+    .filter((payment) => getStatus(payment) === 'Pending')
+    .reduce((sum, payment) => sum + Number(payment.amount), 0);
+  const waivedTotal = payments
+    .filter((payment) => getStatus(payment) === 'Waived')
+    .reduce((sum, payment) => sum + Number(payment.amount), 0);
+  const filteredPayments = payments.filter((payment) => (
+    (statusFilter === 'All' || getStatus(payment) === statusFilter)
+      && `${payment.id} ${payment.patientName} ${payment.studentId || payment.patientId} ${payment.reference || ''} ${payment.service}`
+        .toLowerCase()
+        .includes(query.toLowerCase())
+  ));
+  const tabCounts = {
+    All: payments.length,
+    Paid: payments.filter((payment) => getStatus(payment) === 'Paid').length,
+    Pending: payments.filter((payment) => getStatus(payment) === 'Pending').length,
+    Waived: payments.filter((payment) => getStatus(payment) === 'Waived').length,
+  };
+
+  function createInvoice(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const patient = data.patients.find((item) => item.id === form.get('patientId'));
+    const amount = Number(form.get('amount'));
+    const studentId = String(form.get('studentId') || '').trim();
+    const service = String(form.get('service') || '');
+    const method = String(form.get('method') || '');
+    const status = String(form.get('status') || '');
+    if (!patient || !studentId || !Number.isFinite(amount) || amount <= 0 || !service || !method
+      || !['Paid', 'Pending', 'Waived'].includes(status)) {
+      notify('Enter a patient, student ID, valid amount, service, payment method, and invoice status.');
+      return;
+    }
+
+    const invoice = {
+      id: makeId('INV'),
+      patientId: patient.id,
+      patientName: patient.name,
+      studentId,
+      amount,
+      service,
+      method,
+      status,
+      date: today(),
+      reference: String(form.get('reference') || '').trim(),
+    };
+    updateData((current) => ({ ...current, payments: [invoice, ...current.payments] }));
+    setShowForm(false);
+    notify(`Invoice ${invoice.id} created for ${patient.name}.`);
+  }
+
+  return (
+    <>
+      <PageHeading eyebrow="FINANCE & RECEIPTS" title="Payments & Billing" description="Manage patient invoices, payment methods, and student coverage." action={<button className="button button-primary" disabled={!data.patients.length} onClick={() => setShowForm(true)} type="button"><span aria-hidden="true">＋</span> New Invoice</button>} />
+      <div className="billing-summary">
+        <article className="billing-summary-card"><span className="billing-summary-icon revenue"><CircleDollarSign aria-hidden="true" size={20} /></span><span className="billing-summary-label">Total Revenue</span><strong>{formatETB(totalRevenue)}</strong><small>Paid invoices</small></article>
+        <article className="billing-summary-card"><span className="billing-summary-icon pending"><Clock3 aria-hidden="true" size={20} /></span><span className="billing-summary-label">Pending Payments</span><strong>{formatETB(pendingTotal)}</strong><small>Awaiting payment</small></article>
+        <article className="billing-summary-card"><span className="billing-summary-icon completed"><BadgeCheck aria-hidden="true" size={20} /></span><span className="billing-summary-label">Completed Invoices</span><strong>{tabCounts.Paid}</strong><small>Successfully paid</small></article>
+        <article className="billing-summary-card"><span className="billing-summary-icon waived"><ShieldCheck aria-hidden="true" size={20} /></span><span className="billing-summary-label">Student Waived Coverage</span><strong>{formatETB(waivedTotal)}</strong><small>Covered by student waiver</small></article>
+      </div>
+      <section className="panel">
+        <div className="billing-toolbar">
+          <div className="billing-tabs" aria-label="Filter invoices by status" role="group">
+            {['All', 'Paid', 'Pending', 'Waived'].map((status) => (
+              <button aria-pressed={statusFilter === status} className={`billing-tab ${statusFilter === status ? 'active' : ''}`} key={status} onClick={() => setStatusFilter(status)} type="button">
+                {status}<span>{tabCounts[status]}</span>
+              </button>
+            ))}
+          </div>
+          <label className="billing-search"><Search aria-hidden="true" size={17} /><input aria-label="Search invoices" onChange={(event) => setQuery(event.target.value)} placeholder="Search patient or student ID" value={query} /></label>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Patient Name</th><th>Student ID</th><th>Service / Treatment</th><th>Amount</th><th>Payment Method</th><th>Status</th></tr></thead>
+            <tbody>{filteredPayments.map((payment) => (
+              <tr key={payment.id}>
+                <td><strong>{payment.patientName}</strong><br /><span className="muted-cell">{payment.id}</span></td>
+                <td>{payment.studentId || payment.patientId}</td>
+                <td>{payment.service}</td>
+                <td><strong>{formatETB(Number(payment.amount))}</strong></td>
+                <td>{payment.method === 'Bank transfer' ? 'CBE Birr' : payment.method}</td>
+                <td><StatusBadge value={getStatus(payment)} /></td>
+              </tr>
+            ))}</tbody>
+          </table>
+          {filteredPayments.length === 0 && <EmptyState title={query || statusFilter !== 'All' ? 'No invoices found' : 'No invoices yet'} body={query || statusFilter !== 'All' ? 'Try a different search or status filter.' : 'Create a new invoice to get started.'} />}
+        </div>
+        {!data.patients.length && <p className="form-hint">Add a patient before creating an invoice.</p>}
+      </section>
+      {showForm && (
+        <Modal title="Create a new invoice" onClose={() => setShowForm(false)}>
+          <form className="form-stack" onSubmit={createInvoice}>
+            <label>Patient<select autoFocus defaultValue="" name="patientId" required><option disabled value="">Select a patient</option>{data.patients.map((patient) => <option key={patient.id} value={patient.id}>{patient.name} ({patient.id})</option>)}</select></label>
+            <label>Student ID<input autoComplete="off" name="studentId" placeholder="Enter student ID" required /></label>
+            <label>Service / treatment<input name="service" placeholder="e.g. Consultation, laboratory test" required /></label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label>Amount (ETB)<input min="0.01" name="amount" placeholder="0.00" required step="0.01" type="number" /></label>
+              <label>Payment method<select defaultValue="" name="method" required><option disabled value="">Select a method</option><option>CBE Birr</option><option>Telebirr</option><option>Cash</option><option>Insurance</option></select></label>
+            </div>
+            <label>Invoice status<select defaultValue="Pending" name="status" required><option>Paid</option><option>Pending</option><option>Waived</option></select></label>
+            <label>Reference <span className="muted-cell">(optional)</span><input autoComplete="off" name="reference" placeholder="Receipt or transaction reference" /></label>
+            <p className="patient-form-note"><span aria-hidden="true">i</span> Demo invoice only. No payment is processed or transferred.</p>
+            <div className="form-actions"><button className="button button-quiet" onClick={() => setShowForm(false)} type="button">Cancel</button><button className="button button-primary" type="submit">Create Invoice</button></div>
+          </form>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+function formatETB(amount) {
+  return `ETB ${new Intl.NumberFormat('en-ET', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount)}`;
 }
 
 function PatientRows({ patients, selectedId, onSelect }) {

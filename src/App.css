@@ -375,6 +375,24 @@ a {
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
+.signin-card select {
+  width: 100%;
+  min-height: 43px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  background: #fff;
+  color: #172033;
+  font-size: 14px;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.signin-card select:focus {
+  border-color: #009b78;
+  box-shadow: 0 0 0 3px rgb(0 155 120 / 12%);
+  outline: 0;
+}
+
 .signin-card .input-wrap input[type='password'],
 .signin-card .input-wrap input[type='text'] {
   padding-right: 44px;
@@ -470,8 +488,8 @@ a {
   flex-direction: column;
   overflow: hidden;
   padding: 25px 16px 16px;
-  border-right: 1px solid #0d6957;
-  background: linear-gradient(165deg, #064e3b 0%, #075a45 48%, #043b33 100%);
+  border-right: 1px solid #003e35;
+  background: #004d40;
   box-shadow: 8px 0 28px rgb(18 71 57 / 8%);
 }
 
@@ -546,9 +564,9 @@ a {
 }
 
 .nav-item.active {
-  border-color: rgb(255 255 255 / 68%);
-  background: #f2fff7;
-  color: #09634e;
+  border-color: #e8f5e9;
+  background: #e8f5e9;
+  color: #004d40;
   font-weight: 700;
   box-shadow: 0 6px 16px rgb(0 39 31 / 18%);
 }
@@ -573,9 +591,9 @@ a {
 }
 
 .nav-item.active .nav-icon {
-  border-color: #cfefd9;
-  background: #d9f4e4;
-  color: #08765b;
+  border-color: #c8e6c9;
+  background: #d7edda;
+  color: #004d40;
 }
 
 .nav-item:hover .nav-icon {
@@ -696,6 +714,33 @@ a {
   display: flex;
   align-items: center;
   gap: 14px;
+}
+
+.header-user {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.header-user-details {
+  display: grid;
+  max-width: 160px;
+  gap: 2px;
+}
+
+.header-user-details strong {
+  overflow: hidden;
+  color: #18352f;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-user-details small {
+  color: #71877c;
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 .topbar-logout {
@@ -1551,6 +1596,22 @@ a {
   padding: 32px;
 }
 
+.page-transition {
+  animation: page-enter 180ms ease-out both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0.65;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .app-footer {
   margin-top: 36px;
   padding-top: 18px;
@@ -2052,6 +2113,90 @@ a {
     @apply mt-5;
   }
 
+  .billing-summary {
+    @apply mb-5 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4;
+  }
+
+  .billing-summary-card {
+    @apply relative grid min-w-0 grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm;
+  }
+
+  .billing-summary-icon {
+    @apply row-span-3 grid h-11 w-11 place-items-center rounded-xl;
+  }
+
+  .billing-summary-icon.revenue {
+    @apply bg-emerald-100 text-emerald-800;
+  }
+
+  .billing-summary-icon.pending {
+    @apply bg-amber-100 text-amber-800;
+  }
+
+  .billing-summary-icon.completed {
+    @apply bg-sky-100 text-sky-800;
+  }
+
+  .billing-summary-icon.waived {
+    @apply bg-violet-100 text-violet-800;
+  }
+
+  .billing-summary-label {
+    @apply text-xs font-medium text-slate-500;
+  }
+
+  .billing-summary-card strong {
+    @apply truncate text-xl font-bold tracking-tight text-slate-900;
+  }
+
+  .billing-summary-card small {
+    @apply text-xs text-slate-400;
+  }
+
+  .billing-toolbar {
+    @apply mb-4 flex flex-wrap items-center justify-between gap-4;
+  }
+
+  .billing-tabs {
+    @apply flex max-w-full gap-1 overflow-x-auto rounded-lg bg-slate-100 p-1;
+  }
+
+  .billing-tab {
+    @apply inline-flex min-h-9 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium text-slate-600 transition hover:text-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-700;
+  }
+
+  .billing-tab.active {
+    @apply bg-white text-emerald-800 shadow-sm;
+  }
+
+  .billing-tab span {
+    @apply rounded-full bg-slate-200 px-1.5 py-0.5 text-[10px] leading-none text-slate-600;
+  }
+
+  .billing-tab.active span {
+    @apply bg-emerald-100 text-emerald-800;
+  }
+
+  .billing-search {
+    @apply flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-slate-400 sm:max-w-xs;
+  }
+
+  .billing-search:focus-within {
+    @apply border-emerald-600 ring-2 ring-emerald-100;
+  }
+
+  .billing-search input {
+    @apply min-w-0 flex-1 border-0 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:ring-0;
+  }
+
+  .badge-paid {
+    @apply bg-emerald-100 text-emerald-800;
+  }
+
+  .badge-waived {
+    @apply bg-violet-100 text-violet-800;
+  }
+
   .empty-state {
     @apply grid justify-items-center gap-2 px-4 py-8 text-center;
   }
@@ -2166,7 +2311,7 @@ a {
     overflow: visible;
     padding: 14px 16px;
     border-right: 0;
-    border-bottom: 1px solid #0d6957;
+    border-bottom: 1px solid #003e35;
   }
 
   .brand {
@@ -2177,6 +2322,18 @@ a {
     margin: 18px 4px 8px;
   }
 
+  .side-nav {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .nav-item {
+    width: auto;
+    min-width: max-content;
+  }
+
   .sidebar-bottom {
     display: none;
   }
@@ -2184,6 +2341,18 @@ a {
   .topbar {
     min-height: 56px;
     padding: 10px 16px;
+  }
+
+  .topbar-right {
+    gap: 8px;
+  }
+
+  .header-user-details {
+    max-width: 100px;
+  }
+
+  .topbar-logout {
+    padding: 0 8px;
   }
 
   .content {
