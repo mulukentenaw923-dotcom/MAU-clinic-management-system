@@ -264,10 +264,15 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: #527765;
+  padding: 7px 9px;
+  border: 1px solid #f1d0ca;
+  border-radius: 7px;
+  background: #fff3f0;
+  color: #a53d2f;
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
 
 .profile-button:hover {
@@ -385,6 +390,10 @@ a {
   color: #172033;
   font-size: 14px;
   transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.signin-card .register-role-select {
+  padding-left: 39px;
 }
 
 .signin-card select:focus {
@@ -669,6 +678,12 @@ a {
 .sidebar .profile-button:hover {
   border-color: #b3eccb;
   background: #f3fff7;
+}
+
+.sidebar .profile-button:hover .logout-label {
+  border-color: #c94f3f;
+  background: #c94f3f;
+  color: #fff;
 }
 
 .main-area {
@@ -995,6 +1010,11 @@ a {
 
 .patient-actions .row-action {
   margin-right: 6px;
+}
+
+.row-action:disabled {
+  color: #64748b;
+  cursor: default;
 }
 
 .patient-remove {
@@ -1876,12 +1896,14 @@ a {
   }
 
   .badge-waiting,
-  .badge-pending {
+  .badge-pending,
+  .badge-scheduled {
     @apply bg-amber-100 text-amber-800;
   }
 
   .badge-in-consultation,
-  .badge-ready {
+  .badge-ready,
+  .badge-checked-in {
     @apply bg-sky-100 text-sky-800;
   }
 
@@ -1893,7 +1915,8 @@ a {
   }
 
   .badge-declined,
-  .badge-low-stock {
+  .badge-low-stock,
+  .badge-cancelled {
     @apply bg-rose-100 text-rose-800;
   }
 

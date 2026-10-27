@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   BadgeCheck,
+  CalendarDays,
   CircleDollarSign,
   Clock3,
   FileText,
@@ -13,6 +14,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import Header from './components/Header.jsx';
+import RegisterPage from './features/auth/RegisterPage.jsx';
 
 const STORAGE_KEY = 'mekdela-clinic-demo-data';
 const SEED_DATA = {
@@ -31,6 +33,7 @@ const SEED_DATA = {
   leaves: [
     { id: 'SL-207', patientId: 'P-1047', patientName: 'Dawit Alemu', from: '2026-10-26', to: '2026-10-28', reason: 'Acute illness', status: 'Pending', created: '2026-10-26' },
   ],
+  appointments: [],
   prescriptions: [],
   payments: [],
   doctors: [],
@@ -38,6 +41,7 @@ const SEED_DATA = {
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
+  { id: 'appointments', label: 'Appointments', icon: CalendarDays },
   { id: 'doctor', label: 'Doctor EHR', icon: Stethoscope },
   { id: 'patients', label: 'Patients Directory', icon: UsersRound },
   { id: 'pharmacy', label: 'Pharmacy', icon: Pill },
@@ -141,6 +145,7 @@ function App() {
         {notice && <div className="toast" role="status">{notice}<button onClick={() => setNotice('')} type="button" aria-label="Dismiss notification">×</button></div>}
         <div className="content page-transition" key={page}>
           {page === 'dashboard' && <Dashboard data={data} onNavigate={setPage} />}
+          {page === 'appointments' && <AppointmentsPage data={data} updateData={updateData} notify={setNotice} />}
           {page === 'patients' && <PatientsPage data={data} updateData={updateData} notify={setNotice} />}
           {page === 'doctor' && <ConsultationsPage data={data} updateData={updateData} notify={setNotice} />}
           {page === 'leave' && <LeavePage data={data} updateData={updateData} notify={setNotice} />}
@@ -177,57 +182,46 @@ function WelcomePage({ onSignIn }) {
 
 function SignInForm({ onSignIn }) {
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Doctor');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+
+  if (isCreatingAccount) {
+    return (
+      <RegisterPage
+        onRegister={({ fullName, role }) => onSignIn({ name: fullName, role })}
+        onSignIn={() => { setIsCreatingAccount(false); setError(''); }}
+      />
+    );
+  }
 
   function submit(event) {
     event.preventDefault();
     const trimmedEmail = email.trim();
-    const trimmedName = name.trim();
-    if (!trimmedEmail || !password || (isCreatingAccount && !trimmedName)) {
-      setError(isCreatingAccount
-        ? 'Enter your full name, email address, and password to continue.'
-        : 'Enter both your email address and password to continue.');
+    if (!trimmedEmail || !password) {
+      setError('Enter both your email address and password to continue.');
       return;
     }
     onSignIn({
-      name: isCreatingAccount ? trimmedName : trimmedEmail.split('@')[0],
-      role,
+      name: trimmedEmail.split('@')[0],
+      role: 'Doctor',
     });
   }
 
   return (
     <div className="signin-card">
-      <h1>{isCreatingAccount ? 'Create an account' : 'Welcome to Mekdela Amba University'}</h1>
-      <p className="login-copy">
-        {isCreatingAccount ? 'Choose your role and create a demo profile.' : 'Clinic Management System · Sign in to access your clinic dashboard.'}
-      </p>
+      <h1>Welcome to Mekdela Amba University</h1>
+      <p className="login-copy">Clinic Management System · Sign in to access your clinic dashboard.</p>
       <form className="form-stack" onSubmit={submit}>
-        {isCreatingAccount && (
-          <label htmlFor="login-name">Full name
-            <input autoComplete="name" id="login-name" onChange={(event) => { setName(event.target.value); setError(''); }} placeholder="Your full name" required value={name} />
-          </label>
-        )}
         <label htmlFor="login-email">Email address
           <span className="input-wrap">
             <svg aria-hidden="true" className="field-icon" fill="none" viewBox="0 0 20 20">
               <rect height="12" rx="2" stroke="currentColor" strokeWidth="1.5" width="16" x="2" y="4" />
               <path d="m3 5 7 5 7-5" stroke="currentColor" strokeWidth="1.5" />
             </svg>
-            <input autoComplete={isCreatingAccount ? 'email' : 'username'} id="login-email" onChange={(event) => { setEmail(event.target.value); setError(''); }} placeholder="name@university.edu" required type="email" value={email} />
+            <input autoComplete="username" id="login-email" onChange={(event) => { setEmail(event.target.value); setError(''); }} placeholder="name@university.edu" required type="email" value={email} />
           </span>
-        </label>
-        <label htmlFor="login-role">Role
-          <select id="login-role" onChange={(event) => setRole(event.target.value)} value={role}>
-            <option>Doctor</option>
-            <option>Pharmacist</option>
-            <option>Patient</option>
-            <option>Admin</option>
-          </select>
         </label>
         <div className="password-field">
           <label htmlFor="login-password">Password</label>
@@ -236,7 +230,7 @@ function SignInForm({ onSignIn }) {
               <rect height="9" rx="1.5" stroke="currentColor" strokeWidth="1.5" width="14" x="3" y="9" />
               <path d="M6 9V6a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.5" />
             </svg>
-            <input autoComplete={isCreatingAccount ? 'new-password' : 'current-password'} id="login-password" onChange={(event) => { setPassword(event.target.value); setError(''); }} placeholder={isCreatingAccount ? 'Create a password' : 'Enter your password'} required type={showPassword ? 'text' : 'password'} value={password} />
+            <input autoComplete="current-password" id="login-password" onChange={(event) => { setPassword(event.target.value); setError(''); }} placeholder="Enter your password" required type={showPassword ? 'text' : 'password'} value={password} />
             <button
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               aria-pressed={showPassword}
@@ -263,14 +257,14 @@ function SignInForm({ onSignIn }) {
             <rect height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5" width="10" x="3" y="7" />
             <path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" strokeWidth="1.5" />
           </svg>
-          {isCreatingAccount ? 'Create account' : 'Sign in'}
+          Sign in
         </button>
       </form>
       <p className="account-prompt">
-        {isCreatingAccount ? 'Already have an account?' : 'New staff member?'}
+        New staff member?
         {' '}
         <button className="account-toggle" onClick={() => { setIsCreatingAccount((current) => !current); setError(''); }} type="button">
-          {isCreatingAccount ? 'Sign in' : 'Create an account'}
+          Create an account
         </button>
       </p>
       <p className="privacy-note"><span aria-hidden="true">ⓘ</span> Demo only. Account details are not saved or verified.</p>
@@ -307,7 +301,7 @@ function Dashboard({ data, onNavigate }) {
           {lowStock.length ? lowStock.slice(0, 3).map((item) => <div className="stock-watch" key={item.id}><span className="medicine-icon">Rx</span><span className="stock-name"><strong>{item.name}</strong><small>Reorder at {item.reorder} units</small></span><span className="stock-count">{item.quantity} left</span></div>) : <EmptyState title="Stock levels look good" body="No items are below their reorder level." />}
         </section>
       </div>
-      <section className="panel quick-panel"><div className="panel-heading"><div><h2>Quick actions</h2><p>Jump into a common clinic task</p></div></div><div className="quick-actions"><QuickAction icon="✚" title="Start consultation" onClick={() => onNavigate('doctor')} /><QuickAction icon="＋" title="Register patient" onClick={() => onNavigate('patients')} /><QuickAction icon="⚕" title="Dispense medicine" onClick={() => onNavigate('pharmacy')} /><QuickAction icon={<ReceiptText aria-hidden="true" size={18} />} title="Create invoice" onClick={() => onNavigate('payments')} /><QuickAction icon="▤" title="Review sick leave" onClick={() => onNavigate('leave')} /></div></section>
+      <section className="panel quick-panel"><div className="panel-heading"><div><h2>Quick actions</h2><p>Jump into a common clinic task</p></div></div><div className="quick-actions"><QuickAction icon={<CalendarDays aria-hidden="true" size={18} />} title="Book appointment" onClick={() => onNavigate('appointments')} /><QuickAction icon="✚" title="Start consultation" onClick={() => onNavigate('doctor')} /><QuickAction icon="＋" title="Register patient" onClick={() => onNavigate('patients')} /><QuickAction icon="⚕" title="Dispense medicine" onClick={() => onNavigate('pharmacy')} /><QuickAction icon={<ReceiptText aria-hidden="true" size={18} />} title="Create invoice" onClick={() => onNavigate('payments')} /><QuickAction icon="▤" title="Review sick leave" onClick={() => onNavigate('leave')} /></div></section>
     </>
   );
 }
@@ -318,6 +312,103 @@ function StatCard({ label, value, detail, icon, color }) {
 
 function QuickAction({ icon, title, onClick }) {
   return <button className="quick-action" onClick={onClick} type="button"><span>{icon}</span><strong>{title}</strong><i>→</i></button>;
+}
+
+function AppointmentsPage({ data, updateData, notify }) {
+  const [showForm, setShowForm] = useState(false);
+  const appointments = [...(data.appointments || [])].sort((first, second) => (
+    `${first.date} ${first.time}`.localeCompare(`${second.date} ${second.time}`)
+  ));
+
+  function scheduleAppointment(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const patient = data.patients.find((item) => item.id === form.get('patientId'));
+    const appointment = {
+      id: makeId('AP'),
+      patientId: patient.id,
+      patientName: patient.name,
+      date: form.get('date'),
+      time: form.get('time'),
+      reason: form.get('reason').trim(),
+      status: 'Scheduled',
+    };
+    const duplicate = appointments.some((item) => item.patientId === appointment.patientId
+      && item.date === appointment.date
+      && item.time === appointment.time
+      && item.status !== 'Cancelled');
+    if (duplicate) {
+      notify('This patient already has an appointment at that time.');
+      return;
+    }
+    updateData((current) => ({ ...current, appointments: [appointment, ...(current.appointments || [])] }));
+    setShowForm(false);
+    notify(`Appointment scheduled for ${patient.name}.`);
+  }
+
+  function updateAppointmentStatus(appointment, status) {
+    updateData((current) => ({
+      ...current,
+      appointments: (current.appointments || []).map((item) => item.id === appointment.id ? { ...item, status } : item),
+      patients: status === 'Checked in'
+        ? current.patients.map((patient) => patient.id === appointment.patientId ? { ...patient, status: 'Waiting' } : patient)
+        : current.patients,
+    }));
+    notify(status === 'Checked in'
+      ? `${appointment.patientName} checked in and added to the doctor queue.`
+      : 'Appointment cancelled.');
+  }
+
+  return (
+    <>
+      <PageHeading
+        className="patients-page-heading appointments-page-heading"
+        eyebrow="VISIT PLANNING"
+        title="Appointments"
+        description="Schedule clinic visits and check patients in to the doctor queue."
+        action={<button className="button button-primary" disabled={data.patients.length === 0} onClick={() => setShowForm(true)} type="button"><span aria-hidden="true">＋</span> Schedule appointment</button>}
+      />
+      <section className="panel">
+        <div className="panel-heading"><div><h2>Appointment schedule</h2><p>{appointments.length} appointments</p></div></div>
+        {appointments.length ? (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Patient</th><th>Date</th><th>Time</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>{appointments.map((appointment) => (
+                <tr key={appointment.id}>
+                  <td><strong>{appointment.patientName}</strong><div className="muted-cell">{appointment.patientId}</div></td>
+                  <td>{new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(`${appointment.date}T00:00:00`))}</td>
+                  <td>{appointment.time}</td>
+                  <td>{appointment.reason}</td>
+                  <td><StatusBadge value={appointment.status} /></td>
+                  <td className="patient-actions">
+                    {appointment.status === 'Scheduled' && <><button className="row-action" onClick={() => updateAppointmentStatus(appointment, 'Checked in')} type="button">Check in</button><button className="row-action patient-remove" onClick={() => updateAppointmentStatus(appointment, 'Cancelled')} type="button">Cancel</button></>}
+                    {appointment.status === 'Checked in' && <button className="row-action" disabled type="button">In queue</button>}
+                  </td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </div>
+        ) : <EmptyState title="No appointments scheduled" body="Schedule a visit for a registered patient to get started." />}
+      </section>
+      {showForm && (
+        <Modal title="Schedule an appointment" onClose={() => setShowForm(false)}>
+          <form className="form-stack" onSubmit={scheduleAppointment}>
+            <label>Patient<select autoFocus defaultValue="" name="patientId" required><option disabled value="">Select a patient</option>{data.patients.map((patient) => <option key={patient.id} value={patient.id}>{patient.name} ({patient.id})</option>)}</select></label>
+            <div className="form-row">
+              <label>Date<input min={today()} name="date" required type="date" /></label>
+              <label>Time<input name="time" required type="time" /></label>
+            </div>
+            <label>Reason for visit<input maxLength="120" name="reason" placeholder="e.g. Follow-up consultation" required /></label>
+            <div className="form-actions">
+              <button className="button button-quiet" onClick={() => setShowForm(false)} type="button">Cancel</button>
+              <button className="button button-primary" type="submit"><CalendarDays aria-hidden="true" size={16} /> Schedule</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </>
+  );
 }
 
 function PatientsPage({ data, updateData, notify }) {
@@ -447,6 +538,7 @@ function ConsultationsPage({ data, updateData, notify }) {
     updateData((current) => ({
       ...current,
       patients: current.patients.map((patient) => patient.id === selected.id ? { ...patient, status: 'Completed', visits: [visit, ...(patient.visits || [])] } : patient),
+      appointments: (current.appointments || []).map((appointment) => appointment.patientId === selected.id && appointment.status === 'Checked in' ? { ...appointment, status: 'Completed' } : appointment),
       prescriptions: prescription ? [prescription, ...current.prescriptions] : current.prescriptions,
     }));
     setDiagnosis(''); setNotes(''); setMedicine(''); setInstructions('');
